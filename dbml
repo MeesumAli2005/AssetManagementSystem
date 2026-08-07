@@ -1,0 +1,174 @@
+// ------ Tables ------
+
+Table departments {
+  id integer [primary key]
+  name varchar [unique, not null]
+  is_active boolean [default: true]
+  created_at timestamp
+}
+
+Table users {
+  id integer [primary key]
+  full_name varchar
+  email varchar [unique, not null]
+  password_hash varchar
+  role varchar [note: 'employee or administrator']
+  is_active boolean [default: true]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table employee_departments {
+  id integer [primary key]
+  employee_id integer [not null]
+  department_id integer [not null]
+  assigned_at timestamp
+}
+
+Table categories {
+  id integer [primary key]
+  name varchar [unique, not null, note: 'laptop, monitor, desk_chair, etc']
+  created_at timestamp
+}
+
+Table category_specs {
+  id integer [primary key]
+  category_id integer [not null]
+  spec_name varchar [not null, note: 'e.g. RAM, Storage, Has Headrest, Dimensions']
+  spec_type varchar [note: 'enum: text, number, boolean, dropdown - controls input validation on frontend']
+  is_required boolean [default: false]
+  created_at timestamp
+}
+
+Table assets {
+  id integer [primary key]
+  asset_tag varchar [unique, not null, note: 'unique identifier / asset code']
+  name varchar
+  category_id integer [note: 'fk to categories']
+  purchase_date date
+  purchase_cost decimal
+  status varchar [note: 'available, assigned, under_repair, retired']
+  condition varchar [note: 'new, good, damaged, etc']
+  current_assignee_id integer [note: 'nullable - fk to users']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table asset_spec_values {
+  id integer [primary key]
+  asset_id integer [not null]
+  category_spec_id integer [not null]
+  value varchar [note: 'actual value, e.g. "16GB", "512GB SSD", "true" - stored as text, cast per spec_type on read']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table asset_assignments {
+  id integer [primary key]
+  asset_id integer [not null]
+  employee_id integer [not null]
+  assigned_by integer [not null, note: 'fk to users - administrator']
+  assigned_at timestamp
+  acknowledged_at timestamp [note: 'nullable until employee acknowledges']
+  returned_at timestamp [note: 'nullable, set when this assignment ends']
+  is_active boolean [default: true]
+}
+
+Table requests {
+  id integer [primary key]
+  request_type varchar [note: 'enum: asset, return, repair']
+  employee_id integer [not null]
+  asset_id integer [note: 'nullable for new asset requests, required for return/repair']
+  category_id integer [note: 'requested category, used for new asset requests']
+  reason text
+  status varchar [note: 'pending, approved, rejected, completed']
+  reviewed_by integer [note: 'fk to users - administrator, nullable']
+  resulting_asset_id integer [note: 'nullable, fk to assets once approved & assigned - for asset requests']
+  created_at timestamp
+  reviewed_at timestamp
+}
+
+Table asset_history {
+  id integer [primary key]
+  performed_by integer [note: 'fk to users, nullable for system events']
+  event_type varchar [note: 'purchase, assignment, return, repair, status_change, condition_change, retirement']
+  description text
+  asset_id integer [not null]
+  occurred_at timestamp
+}
+
+Table audit_logs {
+  id integer [primary key]
+  admin_id integer [not null]
+  action varchar
+  entity_type varchar [note: 'asset, user, request, etc']
+  entity_id integer
+  details text
+  created_at timestamp
+}
+
+Table asset_documents {
+  id integer [primary key]
+  asset_id integer [not null]
+  document_type varchar [note: 'receipt, repair_record, other']
+  file_url varchar [note: 'points to blob storage, e.g. S3']
+  uploaded_by integer [note: 'fk to users']
+  uploaded_at timestamp
+}
+
+// ------ Relationships ------
+
+Ref: employee_departments.employee_id > users.id // many-to-one
+Ref: employee_departments.department_id > departments.id // many-to-one
+
+Ref: category_specs.category_id > categories.id // many-to-one
+
+Ref: assets.category_id > categories.id // many-to-one
+Ref: assets.current_assignee_id > users.id // many-to-one
+
+Ref: asset_spec_values.asset_id > assets.id // many-to-one
+Ref: asset_spec_values.category_spec_id > category_specs.id // many-to-one
+
+Ref: asset_assignments.asset_id > assets.id // many-to-one
+Ref: asset_assignments.employee_id > users.id // many-to-one
+Ref: asset_assignments.assigned_by > users.id // many-to-one
+
+Ref: requests.employee_id > users.id // many-to-one
+Ref: requests.asset_id > assets.id // many-to-one
+Ref: requests.category_id > categories.id // many-to-one
+Ref: requests.reviewed_by > users.id // many-to-one
+Ref: requests.resulting_asset_id - assets.id // one-to-one
+
+Ref: asset_history.asset_id > assets.id // many-to-one
+Ref: asset_history.performed_by > users.id // many-to-one
+
+Ref: audit_logs.admin_id > users.id // many-to-one
+
+Ref: asset_documents.asset_id > assets.id // many-to-one
+Ref: asset_documents.uploaded_by > users.id // many-to-one
+
+// ------ Groups (for visual zoning — drag tables together first) ------
+
+TableGroup core_identity [color: #1E69FD] {
+  users
+  departments
+  employee_departments
+}
+
+TableGroup asset_management [color: #2ECC71] {
+  categories
+  category_specs
+  assets
+  asset_spec_values
+  asset_assignments
+}
+
+TableGroup workflow [color: #F39C12] {
+  requests
+}
+
+TableGroup tracking [color: #9B59B6] {
+  asset_history
+  audit_logs
+  asset_documents
+}
