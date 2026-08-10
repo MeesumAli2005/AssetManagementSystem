@@ -6,7 +6,7 @@
 
 # 1. Problem Statement
 
-Currently, there is no system in place for keeping records of the assets owned by the company. Although there might be some systems in place involving excel or manual book-keeping, these approaches do not allow for operations associated with assets, involving their management, delegation, records etc. Therefore, we need a digital system in place to cater to these problems.
+Currently, there is no system in place for keeping records of the assets owned by the company. Although there might be some systems in place involving excel or manual book-keeping, these approaches do not allow for operations associated with assets, involving their management, delegation, records etc. Therefore, we need a digital system in place to cater to these problems. this is a tester line
 
 The system should provide visibility into:
 
