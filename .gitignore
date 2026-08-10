@@ -23,11 +23,8 @@ coverage/
 .DS_Store
 Thumbs.db
 
-# Docker MySQL data
-docker/mydb/
-docker/mysql/
-docker/performance_schema/
-docker/#*
+# Docker MySQL data (whole dir is runtime data + certs, not source)
+docker/
 
 # Logs
 *.log
