@@ -19,6 +19,9 @@ coverage/
 .vscode/
 .idea/
 
+# Claude Code local settings (machine-specific, not shared)
+.claude/settings.local.json
+
 # Operating system
 .DS_Store
 Thumbs.db
@@ -29,3 +32,6 @@ docker/
 # Logs
 *.log
 logs/
+
+# Uploaded files
+uploads/
