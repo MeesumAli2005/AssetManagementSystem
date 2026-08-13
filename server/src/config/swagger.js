@@ -9,52 +9,78 @@ const options = {
       description:
         'REST API for the Asset Management and Tracking System — authentication, employee/admin accounts, asset categories, asset inventory, and supporting document uploads.',
     },
-    servers: [
+    servers: 
+    [
       { url: 'http://localhost:5000', description: 'Local dev server' },
     ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
+
+    components: 
+    {
+      securitySchemes: 
+      {
+
+        bearerAuth: 
+        {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
-          description: 'Paste the JWT returned by /api/auth/login (without the "Bearer " prefix — Swagger UI adds it).',
+          description: 'Paste the JWT returned by /api/auth/login (without the "Bearer " prefix).',
         },
+
       },
-      schemas: {
-        Error: {
+
+      schemas: 
+      {
+        Error: 
+        {
           type: 'object',
-          properties: {
+          properties: 
+          {
             message: { type: 'string' },
           },
+
         },
-        User: {
+
+        User: 
+        {
           type: 'object',
-          properties: {
+          properties: 
+          {
             id: { type: 'integer' },
             full_name: { type: 'string' },
             email: { type: 'string', format: 'email' },
             role: { type: 'string', enum: ['employee', 'administrator'] },
           },
+
         },
-        AuthResponse: {
+
+        AuthResponse: 
+        {
           type: 'object',
-          properties: {
+          properties: 
+          {
             token: { type: 'string' },
             user: { $ref: '#/components/schemas/User' },
           },
+
         },
-        CategorySpec: {
+
+        CategorySpec: 
+        {
           type: 'object',
-          properties: {
+          properties: 
+          {
             id: { type: 'integer' },
             category_id: { type: 'integer' },
             spec_name: { type: 'string' },
             spec_type: { type: 'string', enum: ['text', 'number', 'boolean', 'dropdown'] },
             is_required: { type: 'boolean' },
           },
+
         },
-        Category: {
+
+        Category: 
+        {
           type: 'object',
           properties: {
             id: { type: 'integer' },
@@ -64,16 +90,22 @@ const options = {
               items: { $ref: '#/components/schemas/CategorySpec' },
             },
           },
+
         },
-        SpecValue: {
+
+        SpecValue: 
+        {
           type: 'object',
           required: ['category_spec_id', 'value'],
           properties: {
             category_spec_id: { type: 'integer' },
             value: { type: 'string' },
           },
+
         },
-        Asset: {
+
+        Asset: 
+        {
           type: 'object',
           properties: {
             id: { type: 'integer' },
@@ -90,7 +122,10 @@ const options = {
             created_at: { type: 'string', format: 'date-time' },
             updated_at: { type: 'string', format: 'date-time' },
           },
+
         },
+
+
         AssetHistoryEntry: {
           type: 'object',
           properties: {
@@ -147,6 +182,7 @@ const options = {
     },
     // Every endpoint requires a bearer token by default; routes that don't
     // (signup, login) override this with `security: []` in their own JSDoc block.
+    
     security: [{ bearerAuth: [] }],
   },
   apis: ['./src/routes/*.js'],

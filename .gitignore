@@ -34,3 +34,6 @@ logs/
 
 # Uploaded files
 uploads/
+
+# Local credentials/notes dump
+CREDENTIALS.txt

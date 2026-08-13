@@ -70,7 +70,7 @@ export default function Login()
             <label className="mb-1.5 block text-sm font-medium text-zinc-300">Password</label>
             <input
               type="password"
-              placeholder="••••••••"
+              placeholder="•••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

@@ -3,6 +3,7 @@ import {
   createDepartment,
   getAllDepartments,
   updateDepartment,
+  deleteDepartment,
 } from '../controllers/departmentController.js';
 
 
@@ -13,8 +14,9 @@ const router = express.Router();
 // Anyone logged in can VIEW departments
 router.get('/', requireAuth, getAllDepartments);
  
-// Only admins can CREATE or UPDATE departments
+// Only admins can CREATE, UPDATE, or DELETE departments
 router.post('/', requireAuth, requireRole('administrator'), createDepartment);
 router.put('/:id', requireAuth, requireRole('administrator'), updateDepartment);
+router.delete('/:id', requireAuth, requireRole('administrator'), deleteDepartment);
  
 export default router;

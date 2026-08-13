@@ -1,14 +1,15 @@
 import { useEffect } from 'react';
 
-// A generic popup shell. Usage:
-//   <Modal open={showForm} onClose={() => setShowForm(false)} title="New Department">
-//     ...your form goes here...
+
 //   </Modal>
-export default function Modal({ open, onClose, title, children }) {
-  useEffect(() => {
+export default function Modal({ open, onClose, title, children }) 
+{
+  useEffect(() => 
+  {
     if (!open) return;
 
-    function handleKeyDown(event) {
+    function handleKeyDown(event) 
+    {
       if (event.key === 'Escape') onClose();
     }
 
@@ -28,7 +29,7 @@ export default function Modal({ open, onClose, title, children }) {
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="font-serif text-lg tracking-tight text-zinc-100">{title}</h2>
+          <h2 className="font-serif text-lg tracking-tight text-zinc-4000">{title}</h2>
           <button
             onClick={onClose}
             className="rounded-md p-1 text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300"

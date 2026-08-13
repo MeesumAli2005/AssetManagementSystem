@@ -107,3 +107,43 @@ export async function updateDepartment(req, res)
         );
     }
 }
+
+// department deletion
+// blocked if any employee assigned to it
+
+export async function deleteDepartment(req, res)
+{
+    try
+    {
+        const deptId = req.params.id;
+
+        const [assignedEmployees] = await pool.query(
+            'SELECT id FROM employee_departments WHERE department_id = ? LIMIT 1',
+            [deptId]
+        );
+
+        if (assignedEmployees.length > 0)
+        {
+            return res.status(409).json({ message: 'Cannot delete a department that has employees assigned to it' });
+        }
+
+        const [result] = await pool.query('DELETE FROM departments WHERE id = ?', [deptId]);
+
+        if (result.affectedRows === 0)
+        {
+            return res.status(404).json({ message: 'department was not found' });
+        }
+
+        return res.json({ message: 'Department deleted successfully' });
+    }
+
+    catch(err)
+    {
+        console.error(err);
+        return res.status(500).json(
+            {
+                message: "server side err deleting the department"
+            }
+        );
+    }
+}

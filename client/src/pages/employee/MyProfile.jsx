@@ -10,9 +10,13 @@ export default function MyProfile() {
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
+
+  // use effect will put the code inside it as a side affect
+  useEffect(() => 
+  {
     getMyProfile()
-      .then((data) => {
+      .then((data) => 
+      {
         setProfile(data);
         setFullName(data.full_name || '');
       })
@@ -20,7 +24,8 @@ export default function MyProfile() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function handleSubmit(event) {
+  async function handleSubmit(event) 
+  {
     event.preventDefault();
     setSaving(true);
     setError('');
@@ -29,9 +34,15 @@ export default function MyProfile() {
       await updateMyProfile(fullName);
       setProfile((prev) => ({ ...prev, full_name: fullName }));
       setSaved(true);
-    } catch (err) {
+    } 
+    
+    catch (err) 
+    {
       setError(err.response?.data?.message || 'Failed to save profile');
-    } finally {
+    } 
+    
+    finally 
+    {
       setSaving(false);
     }
   }

@@ -1,8 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&display=swap');
 @import "tailwindcss";
 
-@theme {
-  --font-sans: 'Neue Montreal', 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-serif: 'Martina Plantijn', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+@theme 
+{
+  --font-sans: 'Space Grotesk', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Fraunces', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
 }
 
 :root {
@@ -20,6 +22,6 @@ body,
 
 body {
   margin: 0;
-  background: #09090b;
+  background: #3306123f;
   font-family: var(--font-sans);
 }

@@ -14,3 +14,8 @@ export async function updateDepartment(id, { name, is_active }) {
   const response = await api.put(`/departments/${id}`, { name, is_active });
   return response.data;
 }
+
+export async function deleteDepartment(id) {
+  const response = await api.delete(`/departments/${id}`);
+  return response.data;
+}

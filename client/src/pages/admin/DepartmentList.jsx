@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getAllDepartments, createDepartment, updateDepartment } from '../../api/departments';
+import { getAllDepartments, createDepartment, updateDepartment, deleteDepartment } from '../../api/departments';
 import StatusBadge from '../../components/StatusBadge';
 import Modal from '../../components/Modal';
 
@@ -16,6 +16,7 @@ export default function DepartmentList() {
   const [formActive, setFormActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
 
   async function loadDepartments() {
     setLoading(true);
@@ -48,6 +49,21 @@ export default function DepartmentList() {
     setFormActive(!!dept.is_active);
     setFormError('');
     setModalOpen(true);
+  }
+
+  async function handleDelete(dept) {
+    if (!window.confirm(`Delete "${dept.name}"? This can't be undone.`)) return;
+
+    setDeletingId(dept.id);
+    setError('');
+    try {
+      await deleteDepartment(dept.id);
+      await loadDepartments();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete department');
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   async function handleSubmit(event) {
@@ -98,12 +114,21 @@ export default function DepartmentList() {
                   color={dept.is_active ? 'green' : 'red'}
                 />
               </div>
-              <button
-                onClick={() => openEditModal(dept)}
-                className="text-sm font-medium text-emerald-400 hover:text-emerald-300"
-              >
-                Edit
-              </button>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => openEditModal(dept)}
+                  className="text-sm font-medium text-emerald-400 hover:text-emerald-300"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(dept)}
+                  disabled={deletingId === dept.id}
+                  className="text-sm font-medium text-red-400 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {deletingId === dept.id ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
             </li>
           ))}
           {departments.length === 0 && (

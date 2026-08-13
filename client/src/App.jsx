@@ -12,7 +12,8 @@ import CreateEmployee from './pages/admin/CreateEmployee';
 import DepartmentList from './pages/admin/DepartmentList';
 import MyProfile from './pages/employee/MyProfile';
 
-export default function App() {
+export default function App() 
+{
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -23,19 +24,29 @@ export default function App() {
 
           {/* Employee-only routes, wrapped in the shared sidebar/topbar Layout */}
           <Route element={<ProtectedRoute allowedRoles={['employee']} />}>
+
             <Route element={<Layout />}>
               <Route path="/employee" element={<EmployeeDashboard />} />
               <Route path="/employee/profile" element={<MyProfile />} />
+
             </Route>
           </Route>
 
+
+
+
           {/* Admin-only routes, wrapped in the shared sidebar/topbar Layout */}
           <Route element={<ProtectedRoute allowedRoles={['administrator']} />}>
+
             <Route element={<Layout />}>
               <Route path="/admin" element={<AdminDashboard />} />
+
               <Route path="/admin/employees" element={<EmployeeList />} />
+
               <Route path="/admin/employees/new" element={<CreateEmployee />} />
+              
               <Route path="/admin/employees/:id" element={<EmployeeDetail />} />
+
               <Route path="/admin/departments" element={<DepartmentList />} />
             </Route>
           </Route>

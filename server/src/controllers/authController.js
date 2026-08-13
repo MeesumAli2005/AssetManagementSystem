@@ -32,7 +32,10 @@ export async function signup(req, res) {
     );
  
     return res.status(201).json({ id: result.insertId, email, role: 'employee' });
-  } catch (err) {
+  } 
+  
+  catch (err) 
+  {
     console.error(err);
     return res.status(500).json({ message: 'Server error during signup' });
   }
@@ -41,11 +44,14 @@ export async function signup(req, res) {
 // ---------------------------------------------------------------------
 // LOGIN
 // ---------------------------------------------------------------------
-export async function login(req, res) {
-  try {
+export async function login(req, res) 
+{
+  try 
+  {
     const { email, password } = req.body;
  
-    if (!email || !password) {
+    if (!email || !password) 
+    {
       return res.status(400).json({ message: 'Email and password are required' });
     }
  
@@ -54,16 +60,17 @@ export async function login(req, res) {
  
     if (!user) 
     {
-
       return res.status(401).json({ message: 'Invalid email or password' });
     }
  
-    if (!user.is_active) {
+    if (!user.is_active) 
+    {
       return res.status(403).json({ message: 'Account is deactivated' });
     }
  
     const passwordMatches = await bcrypt.compare(password, user.password_hash);
-    if (!passwordMatches) {
+    if (!passwordMatches) 
+    {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
  
@@ -77,7 +84,10 @@ export async function login(req, res) {
       token,
       user: { id: user.id, full_name: user.full_name, email: user.email, role: user.role },
     });
-  } catch (err) {
+  } 
+  
+  catch (err) 
+  {
     console.error(err);
     return res.status(500).json({ message: 'Server error during login' });
   }
