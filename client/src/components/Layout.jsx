@@ -2,6 +2,23 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const ICONS = {
+
+  categories: (
+  <path
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3ZM6 6h.008v.008H6V6Z"
+  />
+  ),
+
+  assets: (
+  <path
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    d="M21 7.5 12 2.25 3 7.5m18 0-9 5.25M21 7.5v9L12 21.75M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
+  />
+  ),
+
   dashboard: (
     <path
       strokeLinecap="round"
@@ -41,6 +58,8 @@ function Icon({ name }) {
 }
 
 const ADMIN_LINKS = [
+  { to: '/categories', label: 'Categories', icon: 'categories' },
+  { to: '/assets', label: 'Assets', icon: 'assets' },
   { to: '/admin', label: 'Dashboard', end: true, icon: 'dashboard' },
   { to: '/admin/employees', label: 'Employees', icon: 'employees' },
   { to: '/admin/departments', label: 'Departments', icon: 'departments' },
@@ -49,6 +68,8 @@ const ADMIN_LINKS = [
 const EMPLOYEE_LINKS = [
   { to: '/employee', label: 'Dashboard', end: true, icon: 'dashboard' },
   { to: '/employee/profile', label: 'My Profile', icon: 'profile' },
+  { to: '/categories', label: 'Categories', icon: 'categories' },
+  { to: '/assets', label: 'Assets', icon: 'assets' },
 ];
 
 function initials(name, email) {

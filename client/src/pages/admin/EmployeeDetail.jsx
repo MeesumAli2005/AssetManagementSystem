@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { getEmployeeById, updateEmployee, setEmployeeActiveStatus } from '../../api/employees';
 import { getAllDepartments } from '../../api/departments';
 import StatusBadge from '../../components/StatusBadge';
@@ -52,12 +53,25 @@ export default function EmployeeDetail() {
   async function handleSave(event) {
     event.preventDefault();
     setSaving(true);
-    setError('');
     try {
+      const nameChanged = fullName !== employee.full_name;
+      const oldDeptIds = employee.departments.map((d) => d.id).sort();
+      const newDeptIds = [...selectedDeptIds].sort();
+      const deptsChanged = JSON.stringify(oldDeptIds) !== JSON.stringify(newDeptIds);
+
       await updateEmployee(id, { full_name: fullName, department_ids: selectedDeptIds });
+
+      // Same idea as the asset save toast — one call, message depends on
+      // which of the two things this save actually touched.
+      let message = 'Employee updated';
+      if (nameChanged && deptsChanged) message = 'Profile and departments updated';
+      else if (deptsChanged) message = 'Departments updated';
+      else if (nameChanged) message = 'Profile updated';
+
+      toast.success(message);
       await loadData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save changes');
+      toast.error(err.response?.data?.message || 'Failed to save changes');
     } finally {
       setSaving(false);
     }
@@ -65,12 +79,13 @@ export default function EmployeeDetail() {
 
   async function handleToggleActive() {
     setSaving(true);
-    setError('');
     try {
-      await setEmployeeActiveStatus(id, !employee.is_active);
+      const activating = !employee.is_active;
+      await setEmployeeActiveStatus(id, activating);
+      toast.success(activating ? 'Employee activated' : 'Employee deactivated');
       await loadData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update status');
+      toast.error(err.response?.data?.message || 'Failed to update status');
     } finally {
       setSaving(false);
     }
@@ -140,23 +155,15 @@ export default function EmployeeDetail() {
         </button>
       </form>
 
-      <div className="mt-8">
-        <p className="mb-2 text-sm font-medium text-zinc-300">Assigned assets</p>
-        {employee.assigned_assets.length === 0 ? (
-          <p className="text-sm text-zinc-500">No assets currently assigned.</p>
-        ) : (
-          <ul className="divide-y divide-zinc-800 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60 shadow-sm">
-            {employee.assigned_assets.map((asset) => (
-              <li key={asset.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                <span className="text-zinc-100">
-                  {asset.name} <span className="text-zinc-500">({asset.asset_tag})</span>
-                </span>
-                <StatusBadge text={asset.status} color="slate" />
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <Link
+        to={`/assets?assignee_id=${id}`}
+        className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-emerald-400 hover:text-emerald-300"
+      >
+        View assigned assets ({employee.assigned_assets.length})
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="h-3.5 w-3.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+        </svg>
+      </Link>
     </div>
   );
 }

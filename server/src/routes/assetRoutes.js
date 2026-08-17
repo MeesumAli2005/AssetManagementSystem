@@ -38,14 +38,39 @@ const router = express.Router();
  *       - in: query
  *         name: condition
  *         schema: { type: string, enum: [new, good, fair, damaged] }
+ *       - in: query
+ *         name: department_id
+ *         schema: { type: integer }
+ *         description: Filters to assets currently assigned to someone in this department
+ *       - in: query
+ *         name: assignee_id
+ *         schema: { type: integer }
+ *         description: Filters to assets currently assigned to this specific user
+ *       - in: query
+ *         name: assigned
+ *         schema: { type: string, enum: [true, false] }
+ *         description: true = has an assignee, false = unassigned, omitted = either
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 10 }
  *     responses:
  *       200:
- *         description: List of assets
+ *         description: Paginated list of assets
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items: { $ref: '#/components/schemas/Asset' }
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items: { $ref: '#/components/schemas/Asset' }
+ *                 page: { type: integer }
+ *                 limit: { type: integer }
+ *                 total: { type: integer }
+ *                 totalPages: { type: integer }
  */
 router.get('/', requireAuth, getAllAssets);
 

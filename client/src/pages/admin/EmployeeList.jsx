@@ -83,6 +83,8 @@ export default function EmployeeList() {
                 <th className="px-4 py-2.5 font-medium text-zinc-400">Email</th>
                 <th className="px-4 py-2.5 font-medium text-zinc-400">Departments</th>
                 <th className="px-4 py-2.5 font-medium text-zinc-400">Status</th>
+                <th className="px-4 py-2.5"></th>
+                <th className="px-4 py-2.5"></th>
               </tr>
             </thead>
             <tbody>
@@ -106,11 +108,41 @@ export default function EmployeeList() {
                       color={emp.is_active ? 'green' : 'red'}
                     />
                   </td>
-                </tr>
-              ))}
+                  <td className="px-4 py-2.5 text-right">
+                    <Link
+                      to={`/assets?assignee_id=${emp.id}`}
+                      className="inline-flex text-zinc-500 hover:text-emerald-400"
+                      aria-label={`View assets assigned to ${emp.full_name}`}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="h-4 w-4">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M21 7.5 12 2.25 3 7.5m18 0-9 5.25M21 7.5v9L12 21.75M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
+                        />
+                      </svg>
+                    </Link>
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
+                  <Link
+                    to={`/admin/employees/${emp.id}`}
+                    className="inline-flex text-zinc-500 hover:text-emerald-400"
+                    aria-label={`Edit ${emp.full_name}`}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="h-4 w-4">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"
+                      />
+                    </svg>
+                  </Link>
+                </td>
+              </tr>))}
+
               {employees.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-zinc-500">
+                  <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
                     No employees found.
                   </td>
                 </tr>

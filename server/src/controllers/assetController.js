@@ -142,6 +142,15 @@ export async function getAllAssets(req, res)
         const category_id = req.query.category_id;
         const status = req.query.status;
         const condition = req.query.condition;
+        const department_id = req.query.department_id;
+        const assignee_id = req.query.assignee_id;
+        const assigned = req.query.assigned; // 'true' | 'false' | undefined
+
+        // req.query values are always strings, so a bad/missing page/limit
+        // just falls back to a sane default instead of crashing.
+        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const limit = Math.max(parseInt(req.query.limit) || 10, 1);
+        const offset = (page - 1) * limit;
 
         const conditions = [];
 
@@ -151,7 +160,7 @@ export async function getAllAssets(req, res)
 
         const values = [];
 
-        if (search) 
+        if (search)
         {
 
             conditions.push
@@ -177,7 +186,7 @@ export async function getAllAssets(req, res)
 
         }
 
-        if (status) 
+        if (status)
         {
             conditions.push(
                 'a.status = ?'
@@ -186,7 +195,7 @@ export async function getAllAssets(req, res)
             values.push(status);
         }
 
-        if (condition) 
+        if (condition)
             {
 
             conditions.push(
@@ -197,18 +206,54 @@ export async function getAllAssets(req, res)
 
         }
 
+        if (assignee_id)
+        {
+            conditions.push('a.current_assignee_id = ?');
+            values.push(assignee_id);
+        }
+
+        if (department_id)
+        {
+            // assets don't have a department column — department is a
+            // property of whoever the asset is assigned to, so this goes
+            // through employee_departments via a subquery instead of a
+            // JOIN (a JOIN would duplicate a row for every department an
+            // employee belongs to).
+            conditions.push(
+                'a.current_assignee_id IN (SELECT employee_id FROM employee_departments WHERE department_id = ?)'
+            );
+            values.push(department_id);
+        }
+
+        if (assigned === 'true')
+        {
+            conditions.push('a.current_assignee_id IS NOT NULL');
+        }
+        else if (assigned === 'false')
+        {
+            conditions.push('a.current_assignee_id IS NULL');
+        }
+
 
         let whereClause = '';
 
-        if (conditions.length > 0) 
+        if (conditions.length > 0)
             {
 
             whereClause ='WHERE ' + conditions.join(' AND ');
 
         }
 
+        // Same WHERE clause, no LIMIT — this is what "page 3 of 7" is
+        // computed from, so it has to count the full filtered set, not
+        // just the 10 rows we're about to return.
+        const [countRows] = await pool.query(
+            `SELECT COUNT(*) AS total FROM assets a ${whereClause}`,
+            values
+        );
+        const total = countRows[0].total;
 
-        const result = await pool.query
+        const [assets] = await pool.query
         (
             `SELECT
                 a.*,
@@ -225,13 +270,18 @@ export async function getAllAssets(req, res)
 
             ${whereClause}
 
-            ORDER BY a.created_at DESC`,
-            values
+            ORDER BY a.created_at DESC
+            LIMIT ? OFFSET ?`,
+            [...values, limit, offset]
         );
 
-        const assets = result[0];
-
-        return res.json(assets);
+        return res.json({
+            data: assets,
+            page,
+            limit,
+            total,
+            totalPages: Math.max(Math.ceil(total / limit), 1),
+        });
 
     }
 
@@ -356,24 +406,59 @@ export async function updateAsset(req, res)
   try 
     {
         const { id } = req.params;
-        const { name, category_id, purchase_date, purchase_cost, status, condition, spec_values } = req.body;
+        const { name, category_id, purchase_date, purchase_cost, status, condition, spec_values, assignee_id } = req.body;
 
         const [existingRows] = await connection.query('SELECT * FROM assets WHERE id = ?', [id]);
 
-        if (existingRows.length === 0) 
+        if (existingRows.length === 0)
         {
             return res.status(404).json({ message: 'Asset not found' });
         }
         const existing = existingRows[0];
 
-        if (status && !VALID_STATUSES.includes(status)) 
+        if (status && !VALID_STATUSES.includes(status))
         {
             return res.status(400).json({ message: `status must be one of: ${VALID_STATUSES.join(', ')}` });
         }
 
-        if (condition && !VALID_CONDITIONS.includes(condition)) 
+        if (condition && !VALID_CONDITIONS.includes(condition))
         {
             return res.status(400).json({ message: `condition must be one of: ${VALID_CONDITIONS.join(', ')}` });
+        }
+
+        // assignee_id is optional and tri-state: absent (undefined) means
+        // "don't touch it", null means "unassign", a number means "assign
+        // to this user" — that's why this can't use `?? existing...` like
+        // the other fields, since `??` treats null the same as undefined.
+        let finalAssigneeId = existing.current_assignee_id;
+        let assigneeName = null;
+
+        if (assignee_id !== undefined)
+        {
+            if (assignee_id === null)
+            {
+                finalAssigneeId = null;
+            }
+            else
+            {
+                const [assigneeRows] = await connection.query('SELECT id, full_name FROM users WHERE id = ?', [assignee_id]);
+                if (assigneeRows.length === 0)
+                {
+                    return res.status(400).json({ message: 'assignee_id does not refer to an existing user' });
+                }
+                finalAssigneeId = assignee_id;
+                assigneeName = assigneeRows[0].full_name;
+            }
+        }
+
+        // "assigned" is meaningless without someone to assign it to — this
+        // is the actual source of truth (the frontend also blocks this,
+        // but that's just UX; this is what stops it for real, e.g. if the
+        // API is called directly).
+        const finalStatus = status ?? existing.status;
+        if (finalStatus === 'assigned' && finalAssigneeId === null)
+        {
+            return res.status(400).json({ message: 'Cannot set status to "assigned" without an assignee' });
         }
 
         const finalCategoryId = category_id ?? existing.category_id;
@@ -382,7 +467,7 @@ export async function updateAsset(req, res)
 
         await connection.query(
         `UPDATE assets
-        SET name = ?, category_id = ?, purchase_date = ?, purchase_cost = ?, status = ?, \`condition\` = ?
+        SET name = ?, category_id = ?, purchase_date = ?, purchase_cost = ?, status = ?, \`condition\` = ?, current_assignee_id = ?
         WHERE id = ?`,
         [
             name ?? existing.name,
@@ -391,6 +476,7 @@ export async function updateAsset(req, res)
             purchase_cost ?? existing.purchase_cost,
             status ?? existing.status,
             condition ?? existing.condition,
+            finalAssigneeId,
             id,
         ]
         );
@@ -416,12 +502,25 @@ export async function updateAsset(req, res)
         }
 
 
-        if (condition && condition !== existing.condition) 
+        if (condition && condition !== existing.condition)
         {
             await connection.query(
                 `INSERT INTO asset_history (performed_by, event_type, description, asset_id)
                 VALUES (?, 'condition_change', ?, ?)`,
                 [req.user.id, `Condition changed from "${existing.condition}" to "${condition}"`, id]
+            );
+        }
+
+        if (assignee_id !== undefined && finalAssigneeId !== existing.current_assignee_id)
+        {
+            const description = finalAssigneeId === null
+                ? 'Asset unassigned'
+                : `Assigned to ${assigneeName}`;
+
+            await connection.query(
+                `INSERT INTO asset_history (performed_by, event_type, description, asset_id)
+                VALUES (?, 'assignment', ?, ?)`,
+                [req.user.id, description, id]
             );
         }
 

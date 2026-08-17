@@ -2,7 +2,12 @@ import { useEffect } from 'react';
 
 
 //   </Modal>
-export default function Modal({ open, onClose, title, children }) 
+const SIZES = {
+  md: 'max-w-md',
+  lg: 'max-w-2xl',
+};
+
+export default function Modal({ open, onClose, title, children, size = 'md' })
 {
   useEffect(() => 
   {
@@ -25,7 +30,7 @@ export default function Modal({ open, onClose, title, children })
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl shadow-black/40"
+        className={`w-full ${SIZES[size] || SIZES.md} rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl shadow-black/40`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">

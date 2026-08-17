@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { getMyProfile, updateMyProfile } from '../../api/employees';
 import StatusBadge from '../../components/StatusBadge';
 
@@ -8,7 +9,6 @@ export default function MyProfile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [saved, setSaved] = useState(false);
 
 
   // use effect will put the code inside it as a side affect
@@ -24,24 +24,23 @@ export default function MyProfile() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function handleSubmit(event) 
+  async function handleSubmit(event)
   {
     event.preventDefault();
     setSaving(true);
     setError('');
-    setSaved(false);
     try {
       await updateMyProfile(fullName);
       setProfile((prev) => ({ ...prev, full_name: fullName }));
-      setSaved(true);
-    } 
-    
-    catch (err) 
+      toast.success('Profile updated');
+    }
+
+    catch (err)
     {
-      setError(err.response?.data?.message || 'Failed to save profile');
-    } 
-    
-    finally 
+      toast.error(err.response?.data?.message || 'Failed to save profile');
+    }
+
+    finally
     {
       setSaving(false);
     }
@@ -74,9 +73,6 @@ export default function MyProfile() {
             className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-500"
           />
         </div>
-
-        {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>}
-        {saved && <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">Saved.</p>}
 
         <button
           type="submit"

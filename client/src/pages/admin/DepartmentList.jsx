@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { getAllDepartments, createDepartment, updateDepartment, deleteDepartment } from '../../api/departments';
 import StatusBadge from '../../components/StatusBadge';
 import Modal from '../../components/Modal';
+import toast from 'react-hot-toast';
+import ConfirmDialog from '../../components/ConfirmDialog';
+
 
 export default function DepartmentList() {
   const [departments, setDepartments] = useState([]);
@@ -17,6 +20,7 @@ export default function DepartmentList() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [deletingId, setDeletingId] = useState(null);
+  const [deptPendingDelete, setDeptPendingDelete] = useState(null);
 
   async function loadDepartments() {
     setLoading(true);
@@ -51,6 +55,36 @@ export default function DepartmentList() {
     setModalOpen(true);
   }
 
+  function requestDelete(dept) 
+  {
+    setDeptPendingDelete(dept);
+  }
+
+  async function confirmDelete()
+  {
+    const dept = deptPendingDelete;
+    setDeptPendingDelete(null);
+    setDeletingId(dept.id);
+    
+    try 
+    {
+      await deleteDepartment(dept.id);
+      toast.success(`"${dept.name}" deleted`);
+      await loadDepartments();
+    } 
+  
+    catch (err) 
+    {
+      toast.error(err.response?.data?.message || 'Failed to delete department');
+    } 
+    
+    finally 
+    {
+      setDeletingId(null);
+    }
+  
+  }
+
   async function handleDelete(dept) {
     if (!window.confirm(`Delete "${dept.name}"? This can't be undone.`)) return;
 
@@ -73,8 +107,10 @@ export default function DepartmentList() {
     try {
       if (editingDept) {
         await updateDepartment(editingDept.id, { name: formName, is_active: formActive });
+        toast.success(`"${formName}" updated`);
       } else {
         await createDepartment(formName);
+        toast.success(`"${formName}" created`);
       }
       setModalOpen(false);
       await loadDepartments();
@@ -122,7 +158,7 @@ export default function DepartmentList() {
                   Edit
                 </button>
                 <button
-                  onClick={() => handleDelete(dept)}
+                  onClick={() => requestDelete(dept)}
                   disabled={deletingId === dept.id}
                   className="text-sm font-medium text-red-400 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -179,6 +215,16 @@ export default function DepartmentList() {
           </button>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={!!deptPendingDelete}
+        onClose={() => setDeptPendingDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete department"
+        message={deptPendingDelete ? `Delete "${deptPendingDelete.name}"? This can't be undone.` : ''}
+        confirmLabel="Delete"
+        danger
+      />
     </div>
   );
 }
