@@ -1,6 +1,5 @@
 import express from 'express';
 import {
-  signup,
   login,
   logout,
   changePassword,
@@ -48,7 +47,7 @@ const router = express.Router();
  *       400: { description: Missing required fields, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *       409: { description: Email already registered, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
-router.post('/signup', signup);
+//router.post('/signup', signup);
 
 /**
  * @swagger

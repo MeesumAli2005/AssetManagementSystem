@@ -1,6 +1,16 @@
 import express from 'express';
 
-import { createAsset, getAllAssets, getAssetById, updateAsset, retireAsset } from '../controllers/assetController.js';
+import {
+  createAsset,
+  getAllAssets,
+  getAssetById,
+  updateAsset,
+  retireAsset,
+  getMyAssignedAssets,
+  getPendingAcknowledgements,
+  acknowledgeAssignment,
+  setUsageState,
+} from '../controllers/assetController.js';
 
 import {uploadDocument, getDocumentsForAsset } from '../controllers/documentController.js';
 
@@ -13,7 +23,7 @@ const router = express.Router();
  * @swagger
  * tags:
  *   - name: Assets
- *     description: Asset inventory — create, view, update, retire (viewing is any logged-in user; writes are admin only)
+ *     description: Asset inventory — create, view, update, retire (admin only — employees do not have inventory access)
  *   - name: Documents
  *     description: Supporting documents (receipts, repair records) attached to an asset
  */
@@ -72,13 +82,48 @@ const router = express.Router();
  *                 total: { type: integer }
  *                 totalPages: { type: integer }
  */
-router.get('/', requireAuth, getAllAssets);
+router.get('/', requireAuth, requireRole('administrator'), getAllAssets);
+
+/**
+ * @swagger
+ * /api/assets/mine:
+ *   get:
+ *     summary: List assets currently assigned to the logged-in employee, with a status/condition summary
+ *     tags: [Assets]
+ *     responses:
+ *       200:
+ *         description: Assigned assets plus a bucketed summary (active/dormant/under_repair)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data: { type: array, items: { type: object } }
+ *                 summary:
+ *                   type: object
+ *                   properties:
+ *                     active: { type: integer }
+ *                     dormant: { type: integer }
+ *                     under_repair: { type: integer }
+ */
+router.get('/mine', requireAuth, getMyAssignedAssets);
+
+/**
+ * @swagger
+ * /api/assets/pending-acknowledgements:
+ *   get:
+ *     summary: List assignments made to the logged-in employee that they haven't acknowledged receipt of yet
+ *     tags: [Assets]
+ *     responses:
+ *       200: { description: List of pending assignments }
+ */
+router.get('/pending-acknowledgements', requireAuth, getPendingAcknowledgements);
 
 /**
  * @swagger
  * /api/assets/{id}:
  *   get:
- *     summary: Get one asset with its history, documents, and spec values
+ *     summary: Get one asset with its history, documents, and spec values. Admins can view any asset; employees can only view an asset they currently or previously had assigned to them.
  *     tags: [Assets]
  *     parameters:
  *       - in: path
@@ -91,6 +136,7 @@ router.get('/', requireAuth, getAllAssets);
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/AssetDetail' }
+ *       403: { description: 'Employee has no history with this asset', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *       404: { description: Asset not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
 router.get('/:id', requireAuth, getAssetById);
@@ -196,6 +242,51 @@ router.post('/:id/retire', requireAuth, requireRole('administrator'), retireAsse
 
 /**
  * @swagger
+ * /api/assets/{id}/acknowledge:
+ *   post:
+ *     summary: Acknowledge receipt of an asset assigned to you (employee self-service)
+ *     tags: [Assets]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200: { description: Acknowledged }
+ *       404: { description: No pending assignment to acknowledge for this asset, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.post('/:id/acknowledge', requireAuth, acknowledgeAssignment);
+
+/**
+ * @swagger
+ * /api/assets/{id}/usage-state:
+ *   patch:
+ *     summary: Mark an asset assigned to you as active or dormant (employee self-service)
+ *     tags: [Assets]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [usage_state]
+ *             properties:
+ *               usage_state: { type: string, enum: [active, dormant] }
+ *     responses:
+ *       200: { description: Usage state updated }
+ *       400: { description: Invalid usage_state, or asset isn't currently assigned, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       403: { description: Asset isn't assigned to you, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       404: { description: Asset not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.patch('/:id/usage-state', requireAuth, setUsageState);
+
+/**
+ * @swagger
  * /api/assets/{asset_id}/documents:
  *   post:
  *     summary: Upload a supporting document for an asset (admin only)
@@ -260,6 +351,6 @@ router.post(
  *               type: array
  *               items: { $ref: '#/components/schemas/AssetDocument' }
  */
-router.get('/:asset_id/documents', requireAuth, getDocumentsForAsset);
+router.get('/:asset_id/documents', requireAuth, requireRole('administrator'), getDocumentsForAsset);
 
 export default router;

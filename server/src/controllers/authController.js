@@ -11,36 +11,36 @@ const JWT_EXPIRES_IN = '1d';
 // created via createEmployeeAccount() in adminController.js, which is
 // locked behind requireAuth + requireRole('administrator').
 // ---------------------------------------------------------------------
-export async function signup(req, res) {
-  try {
-    const { full_name, email, password } = req.body;
+// export async function signup(req, res) {
+//   try {
+//     const { full_name, email, password } = req.body;
  
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
-    }
+//     if (!email || !password) {
+//       return res.status(400).json({ message: 'Email and password are required' });
+//     }
  
-    const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
-    if (existing.length > 0) {
-      return res.status(409).json({ message: 'Email already registered' });
-    }
+//     const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+//     if (existing.length > 0) {
+//       return res.status(409).json({ message: 'Email already registered' });
+//     }
  
-    const password_hash = await bcrypt.hash(password, 10);
+//     const password_hash = await bcrypt.hash(password, 10);
  
-    const [result] = await pool.query(
-      'INSERT INTO users (full_name, email, password_hash, role) VALUES (?, ?, ?, ?)',
-      [full_name, email, password_hash, 'employee'] // always employee — never trust client-sent role
-    );
+//     const [result] = await pool.query(
+//       'INSERT INTO users (full_name, email, password_hash, role) VALUES (?, ?, ?, ?)',
+//       [full_name, email, password_hash, 'employee'] // always employee — never trust client-sent role
+//     );
  
-    return res.status(201).json({ id: result.insertId, email, role: 'employee' });
-  } 
+//     return res.status(201).json({ id: result.insertId, email, role: 'employee' });
+//   } 
   
-  catch (err) 
-  {
-    console.error(err);
-    return res.status(500).json({ message: 'Server error during signup' });
-  }
-}
- 
+//   catch (err) 
+//   {
+//     console.error(err);
+//     return res.status(500).json({ message: 'Server error during signup' });
+//   }
+// }
+
 // ---------------------------------------------------------------------
 // LOGIN
 // ---------------------------------------------------------------------

@@ -94,12 +94,12 @@ export default function AssetList()
             <div className="mb-6 flex items-center justify-between">
                 <div>
                     <h1 className="font-serif text-3xl tracking-tight text-zinc-100">Assets</h1>
-                    <p className="mt-1 text-sm text-zinc-500">Search, filter, and track your inventory.</p>
+                    <p className="mt-1 text-base text-zinc-500">Search, filter, and track your inventory.</p>
                 </div>
                 {isAdmin && (
                     <Link
                         to="/assets/new"
-                        className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-500"
+                        className="rounded-lg bg-emerald-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-emerald-500"
                     >
                         New Asset
                     </Link>
@@ -112,12 +112,12 @@ export default function AssetList()
                     placeholder="Search by name or asset tag…"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-64 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    className="w-64 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 placeholder:text-zinc-500 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                 />
                 <select
                     value={categoryId}
                     onChange={(e) => setCategoryId(e.target.value)}
-                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                 >
                     <option value="">All categories</option>
                     {categories.map((cat) => (
@@ -127,7 +127,7 @@ export default function AssetList()
                 <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
-                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                 >
                     <option value="">All statuses</option>
                     {STATUSES.map((s) => (
@@ -137,7 +137,7 @@ export default function AssetList()
                 <select
                     value={departmentId}
                     onChange={(e) => setDepartmentId(e.target.value)}
-                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                 >
                     <option value="">All departments</option>
                     {departments.map((dept) => (
@@ -147,7 +147,7 @@ export default function AssetList()
                 <select
                     value={assigneeId}
                     onChange={(e) => setAssigneeId(e.target.value)}
-                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                 >
                     <option value="">All employees</option>
                     {employees.map((emp) => (
@@ -157,7 +157,7 @@ export default function AssetList()
                 <select
                     value={assignedFilter}
                     onChange={(e) => setAssignedFilter(e.target.value)}
-                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                 >
                     <option value="">Assigned or unassigned</option>
                     <option value="true">Assigned only</option>
@@ -165,13 +165,13 @@ export default function AssetList()
                 </select>
             </div>
 
-            {loading && <p className="text-sm text-zinc-500">Loading…</p>}
-            {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>}
+            {loading && <p className="text-base text-zinc-500">Loading…</p>}
+            {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">{error}</p>}
 
             {!loading && !error && (
                 <>
                     <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60 shadow-sm">
-                        <table className="w-full border-collapse text-sm">
+                        <table className="w-full border-collapse text-base">
                             <thead className="bg-zinc-800/50 text-left">
                                 <tr>
                                     <th className="px-4 py-2.5 font-medium text-zinc-400">Asset Tag</th>
@@ -217,7 +217,7 @@ export default function AssetList()
                     </div>
 
                     {total > 0 && (
-                        <div className="mt-4 flex items-center justify-between text-sm text-zinc-500">
+                        <div className="mt-4 flex items-center justify-between text-base text-zinc-500">
                             <p>
                                 Page {page} of {totalPages} · {total} asset{total === 1 ? '' : 's'}
                             </p>
@@ -225,14 +225,14 @@ export default function AssetList()
                                 <button
                                     onClick={() => setPage((p) => Math.max(p - 1, 1))}
                                     disabled={page <= 1}
-                                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-200 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-base text-zinc-200 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Previous
                                 </button>
                                 <button
                                     onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
                                     disabled={page >= totalPages}
-                                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-200 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-base text-zinc-200 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Next
                                 </button>

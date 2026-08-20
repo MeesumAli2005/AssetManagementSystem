@@ -21,7 +21,7 @@ export async function uploadDocument(assetId, file, documentType)
 // header via the interceptor) as a blob, then open that instead.
 export async function downloadDocument(fileUrl) {
   const response = await api.get(fileUrl, {
-    baseURL: 'http://localhost:5000',
+    baseURL: 'http://172.20.2.224:5000',
     responseType: 'blob',
   });
   const blobUrl = URL.createObjectURL(response.data);

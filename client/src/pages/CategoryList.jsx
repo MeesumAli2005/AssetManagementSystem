@@ -111,32 +111,32 @@ export default function CategoryList() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="font-serif text-3xl tracking-tight text-zinc-100">Categories</h1>
-          <p className="mt-1 text-sm text-zinc-500">Asset categories and the specs each one tracks.</p>
+          <p className="mt-1 text-base text-zinc-500">Asset categories and the specs each one tracks.</p>
         </div>
         {isAdmin && (
           <button
             onClick={openCreateModal}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-500"
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-emerald-500"
           >
             New Category
           </button>
         )}
       </div>
 
-      {loading && <p className="text-sm text-zinc-500">Loading…</p>}
-      {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>}
+      {loading && <p className="text-base text-zinc-500">Loading…</p>}
+      {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">{error}</p>}
 
       {!loading && !error && (
         <ul className="space-y-3">
           {categories.map((cat) => (
             <li key={cat.id} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-zinc-100">{cat.name}</span>
+                <span className="text-base font-medium text-zinc-100">{cat.name}</span>
                 {isAdmin && (
                   <button
                     onClick={() => setCatPendingDelete(cat)}
                     disabled={deletingId === cat.id}
-                    className="text-sm font-medium text-red-400 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="text-base font-medium text-red-400 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {deletingId === cat.id ? 'Deleting…' : 'Delete'}
                   </button>
@@ -145,7 +145,7 @@ export default function CategoryList() {
               {cat.specs.length > 0 && (
                 <ul className="mt-2 flex flex-wrap gap-2">
                   {cat.specs.map((spec) => (
-                    <li key={spec.id} className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs text-zinc-400">
+                    <li key={spec.id} className="rounded-full bg-zinc-800 px-2.5 py-1 text-sm text-zinc-400">
                       {spec.spec_name}
                       {spec.is_required ? ' *' : ''}
                     </li>
@@ -155,7 +155,7 @@ export default function CategoryList() {
             </li>
           ))}
           {categories.length === 0 && (
-            <li className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-6 text-center text-sm text-zinc-500">
+            <li className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-6 text-center text-base text-zinc-500">
               No categories yet.
             </li>
           )}
@@ -165,23 +165,23 @@ export default function CategoryList() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="New Category" size="lg">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">Name</label>
+            <label className="mb-1.5 block text-base font-medium text-zinc-300">Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
             />
           </div>
 
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label className="text-sm font-medium text-zinc-300">Specs</label>
+              <label className="text-base font-medium text-zinc-300">Specs</label>
               <button
                 type="button"
                 onClick={addSpecRow}
-                className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
+                className="text-sm font-medium text-emerald-400 hover:text-emerald-300"
               >
                 + Add spec
               </button>
@@ -196,18 +196,18 @@ export default function CategoryList() {
                     value={spec.spec_name}
                     onChange={(e) => updateSpecRow(index, 'spec_name', e.target.value)}
                     required
-                    className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-base text-zinc-100 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                   />
                   <select
                     value={spec.spec_type}
                     onChange={(e) => updateSpecRow(index, 'spec_type', e.target.value)}
-                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-sm text-zinc-100 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    className="rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-base text-zinc-100 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                   >
                     {SPEC_TYPES.map((t) => (
                       <option key={t} value={t}>{t}</option>
                     ))}
                   </select>
-                  <label className="flex items-center gap-1 text-xs text-zinc-400">
+                  <label className="flex items-center gap-1 text-sm text-zinc-400">
                     <input
                       type="checkbox"
                       checked={spec.is_required}
@@ -232,7 +232,7 @@ export default function CategoryList() {
           <button
             type="submit"
             disabled={saving}
-            className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? 'Creating…' : 'Create Category'}
           </button>

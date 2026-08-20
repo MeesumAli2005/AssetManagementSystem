@@ -11,7 +11,7 @@ const options = {
     },
     servers: 
     [
-      { url: 'http://localhost:5000', description: 'Local dev server' },
+      { url: 'http://172.20.2.224:5000', description: 'Local dev server' },
     ],
 
     components: 

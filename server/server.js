@@ -11,6 +11,7 @@ import assetRoutes from './src/routes/assetRoutes.js';
 
 import departmentRoutes from './src/routes/departmentRoutes.js';
 import employeeRoutes from './src/routes/employeeRoutes.js';
+import requestRoutes from './src/routes/requestRoutes.js';
 
 
 import { requireAuth } from './src/middleware/auth.js';
@@ -37,6 +38,8 @@ app.use('/api/assets', assetRoutes);
 
 app.use('/api/departments', departmentRoutes);
 app.use('/api/employees', employeeRoutes);
+
+app.use('/api/requests', requestRoutes);
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get('/api-docs.json', (req, res) => res.json(swaggerSpec)); // raw spec, e.g. for Postman's "Import from link"

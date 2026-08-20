@@ -1,5 +1,8 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getPendingAcknowledgements } from '../api/assets';
+import { getMyRequests, getAllRequests } from '../api/requests';
 
 const ICONS = {
 
@@ -47,6 +50,22 @@ const ICONS = {
       d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0"
     />
   ),
+  checkBadge: (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="m9 12.75 1.5 1.5 3.75-3.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+    />
+  ),
+  requests: (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M9 12h6m-6 4h6m-7 5h8a2 2 0 0 0 2-2V7.5L14.5 3H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2Zm6-16.5V8h4.5"
+    />
+  ),
+
+  
 };
 
 function Icon({ name }) {
@@ -58,18 +77,22 @@ function Icon({ name }) {
 }
 
 const ADMIN_LINKS = [
-  { to: '/categories', label: 'Categories', icon: 'categories' },
-  { to: '/assets', label: 'Assets', icon: 'assets' },
   { to: '/admin', label: 'Dashboard', end: true, icon: 'dashboard' },
+  { to: '/assets', label: 'Assets', icon: 'assets' },
+  { to: '/categories', label: 'Categories', icon: 'categories' },
+
   { to: '/admin/employees', label: 'Employees', icon: 'employees' },
   { to: '/admin/departments', label: 'Departments', icon: 'departments' },
+  { to: '/admin/requests', label: 'Requests', icon: 'requests', badge: 'reqs' },
 ];
 
 const EMPLOYEE_LINKS = [
   { to: '/employee', label: 'Dashboard', end: true, icon: 'dashboard' },
   { to: '/employee/profile', label: 'My Profile', icon: 'profile' },
+  { to: '/employee/my-assets', label: 'My Assets', icon: 'assets' },
+  { to: '/employee/requests', label: 'Requests', icon: 'requests' },
+  { to: '/employee/acknowledgements', label: 'Acknowledgements', icon: 'checkBadge', badge: 'acks' },
   { to: '/categories', label: 'Categories', icon: 'categories' },
-  { to: '/assets', label: 'Assets', icon: 'assets' },
 ];
 
 function initials(name, email) {
@@ -79,55 +102,97 @@ function initials(name, email) {
   return source.slice(0, 2).toUpperCase();
 }
 
-export default function Layout() {
+export default function Layout()
+{
   const { user, logout } = useAuth();
+  const location = useLocation();
   const links = user.role === 'administrator' ? ADMIN_LINKS : EMPLOYEE_LINKS;
+  const [counts, setCounts] = useState({});
+
+  // Re-fetched on every navigation within the app shell (Layout itself never
+  // unmounts across routes, so a mount-only effect would go stale) — cheap
+  // enough for a couple of small list requests, and keeps the sidebar badges
+  // from drifting after the user acts on something.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCounts() {
+      try {
+        if (user.role === 'administrator') {
+          const pending = await getAllRequests('pending');
+          if (!cancelled) setCounts({ reqs: pending.length });
+        } else {
+          const [pendingAcks, myRequests] = await Promise.all([
+            getPendingAcknowledgements(),
+            getMyRequests(),
+          ]);
+          const pendingReturnAcks = myRequests.filter(
+            (r) => r.request_type === 'return' && r.status === 'completed' && !r.acknowledged_at
+          ).length;
+          if (!cancelled) setCounts({ acks: pendingAcks.length + pendingReturnAcks });
+        }
+      } catch {
+        // Badge counts are a convenience, not critical — fail silently.
+      }
+    }
+
+    loadCounts();
+    return () => { cancelled = true; };
+  }, [user.role, location.pathname]);
 
   return (
     <div className="flex min-h-screen bg-zinc-950 text-zinc-100 [background:radial-gradient(ellipse_1200px_500px_at_50%_-10%,rgba(16,185,129,0.10),transparent)]">
       <aside className="flex w-56 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/60 px-4 py-6">
         <div className="mb-8 flex items-center gap-2 px-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 text-sm font-bold text-zinc-950 shadow-[0_0_20px_-4px_rgba(16,185,129,0.7)]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 text-base font-bold text-zinc-950 shadow-[0_0_20px_-4px_rgba(16,185,129,0.7)]">
             A
           </div>
           <span className="font-serif text-lg tracking-tight text-zinc-100">Asset Manager</span>
         </div>
 
         <nav className="flex flex-1 flex-col gap-1">
-          {links.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end={link.end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg border-l-2 px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'border-emerald-400 bg-emerald-500/10 text-emerald-300'
-                    : 'border-transparent text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100'
-                }`
-              }
-            >
-              <Icon name={link.icon} />
-              {link.label}
-            </NavLink>
-          ))}
+          {links.map((link) => {
+            const count = link.badge ? counts[link.badge] : undefined;
+            return (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.end}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 rounded-lg border-l-2 px-3 py-2 text-base font-medium transition-colors ${
+                    isActive
+                      ? 'border-emerald-400 bg-emerald-500/10 text-emerald-300'
+                      : 'border-transparent text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100'
+                  }`
+                }
+              >
+                <Icon name={link.icon} />
+                <span className="flex-1">{link.label}</span>
+                {!!count && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500 px-1 text-[11px] font-semibold text-zinc-950">
+                    {count}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
       </aside>
 
       <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/40 px-8 py-4 backdrop-blur">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400/30 to-emerald-600/30 text-sm font-semibold text-emerald-300">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400/30 to-emerald-600/30 text-base font-semibold text-emerald-300">
               {initials(user.full_name, user.email)}
             </div>
             <div>
-              <p className="text-sm font-medium text-zinc-100">{user.full_name || user.email}</p>
-              <p className="text-xs capitalize text-zinc-500">{user.role}</p>
+              <p className="text-base font-medium text-zinc-100">{user.full_name || user.email}</p>
+              <p className="text-sm capitalize text-zinc-500">{user.role}</p>
             </div>
           </div>
           <button
             onClick={logout}
-            className="rounded-lg border border-zinc-700 bg-zinc-800 px-3.5 py-1.5 text-sm font-medium text-zinc-200 transition hover:bg-zinc-700"
+            className="rounded-lg border border-zinc-700 bg-zinc-800 px-3.5 py-1.5 text-base font-medium text-zinc-200 transition hover:bg-zinc-700"
           >
             Logout
           </button>

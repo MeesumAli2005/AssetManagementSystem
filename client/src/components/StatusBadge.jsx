@@ -9,7 +9,7 @@ const COLOR_MAP = {
 export default function StatusBadge({ text, color = 'slate' }) {
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${COLOR_MAP[color] || COLOR_MAP.slate}`}
+      className={`inline-flex rounded-full px-2.5 py-0.5 text-sm font-medium capitalize ${COLOR_MAP[color] || COLOR_MAP.slate}`}
     >
       {text}
     </span>

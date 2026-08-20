@@ -21,10 +21,10 @@ export function AuthProvider({ children })
     return user; 
   }
 
-  async function signup(full_name, email, password) 
-  {
-    await api.post('/auth/signup', { full_name, email, password });
-  }
+  // async function signup(full_name, email, password) 
+  // {
+  //   await api.post('/auth/signup', { full_name, email, password });
+  // }
 
   async function logout() 
   {
@@ -51,7 +51,7 @@ export function AuthProvider({ children })
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, changePassword }}>
+    <AuthContext.Provider value={{ user, login, logout, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

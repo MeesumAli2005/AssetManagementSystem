@@ -39,11 +39,11 @@ export default function EmployeeList() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="font-serif text-3xl tracking-tight text-zinc-100">Employees</h1>
-          <p className="mt-1 text-sm text-zinc-500">Search, filter, and manage employee accounts.</p>
+          <p className="mt-1 text-base text-zinc-500">Search, filter, and manage employee accounts.</p>
         </div>
         <Link
           to="/admin/employees/new"
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-500"
+          className="rounded-lg bg-emerald-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-emerald-500"
         >
           New Employee
         </Link>
@@ -55,12 +55,12 @@ export default function EmployeeList() {
           placeholder="Search by name or email…"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className="w-64 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+          className="w-64 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 placeholder:text-zinc-500 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
         />
         <select
           value={departmentId}
           onChange={(event) => setDepartmentId(event.target.value)}
-          className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+          className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
         >
           <option value="">All departments</option>
           {departments.map((dept) => (
@@ -71,12 +71,12 @@ export default function EmployeeList() {
         </select>
       </div>
 
-      {loading && <p className="text-sm text-zinc-500">Loading…</p>}
-      {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>}
+      {loading && <p className="text-base text-zinc-500">Loading…</p>}
+      {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">{error}</p>}
 
       {!loading && !error && (
         <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60 shadow-sm">
-          <table className="w-full border-collapse text-sm">
+          <table className="w-full border-collapse text-base">
             <thead className="bg-zinc-800/50 text-left">
               <tr>
                 <th className="px-4 py-2.5 font-medium text-zinc-400">Name</th>

@@ -34,3 +34,8 @@ export async function setEmployeeActiveStatus(id, is_active) {
   const response = await api.patch(`/employees/${id}/status`, { is_active });
   return response.data;
 }
+
+export async function resetEmployeePassword(user_id, temporary_password) {
+  const response = await api.post('/admin/employees/reset-password', { user_id, temporary_password });
+  return response.data;
+}

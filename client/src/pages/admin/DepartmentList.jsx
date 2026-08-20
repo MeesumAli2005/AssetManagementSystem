@@ -85,21 +85,6 @@ export default function DepartmentList() {
   
   }
 
-  async function handleDelete(dept) {
-    if (!window.confirm(`Delete "${dept.name}"? This can't be undone.`)) return;
-
-    setDeletingId(dept.id);
-    setError('');
-    try {
-      await deleteDepartment(dept.id);
-      await loadDepartments();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete department');
-    } finally {
-      setDeletingId(null);
-    }
-  }
-
   async function handleSubmit(event) {
     event.preventDefault();
     setSaving(true);
@@ -126,25 +111,25 @@ export default function DepartmentList() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="font-serif text-3xl tracking-tight text-zinc-100">Departments</h1>
-          <p className="mt-1 text-sm text-zinc-500">Manage the departments your employees belong to.</p>
+          <p className="mt-1 text-base text-zinc-500">Manage the departments your employees belong to.</p>
         </div>
         <button
           onClick={openCreateModal}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-500"
+          className="rounded-lg bg-emerald-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-emerald-500"
         >
           New Department
         </button>
       </div>
 
-      {loading && <p className="text-sm text-zinc-500">Loading…</p>}
-      {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>}
+      {loading && <p className="text-base text-zinc-500">Loading…</p>}
+      {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">{error}</p>}
 
       {!loading && !error && (
         <ul className="divide-y divide-zinc-800 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60 shadow-sm">
           {departments.map((dept) => (
             <li key={dept.id} className="flex items-center justify-between px-4 py-3.5">
               <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-zinc-100">{dept.name}</span>
+                <span className="text-base font-medium text-zinc-100">{dept.name}</span>
                 <StatusBadge
                   text={dept.is_active ? 'Active' : 'Inactive'}
                   color={dept.is_active ? 'green' : 'red'}
@@ -153,14 +138,14 @@ export default function DepartmentList() {
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => openEditModal(dept)}
-                  className="text-sm font-medium text-emerald-400 hover:text-emerald-300"
+                  className="text-base font-medium text-emerald-400 hover:text-emerald-300"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => requestDelete(dept)}
                   disabled={deletingId === dept.id}
-                  className="text-sm font-medium text-red-400 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="text-base font-medium text-red-400 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {deletingId === dept.id ? 'Deleting…' : 'Delete'}
                 </button>
@@ -168,7 +153,7 @@ export default function DepartmentList() {
             </li>
           ))}
           {departments.length === 0 && (
-            <li className="px-4 py-6 text-center text-sm text-zinc-500">No departments yet.</li>
+            <li className="px-4 py-6 text-center text-base text-zinc-500">No departments yet.</li>
           )}
         </ul>
       )}
@@ -180,18 +165,18 @@ export default function DepartmentList() {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-300">Name</label>
+            <label className="mb-1.5 block text-base font-medium text-zinc-300">Name</label>
             <input
               type="text"
               value={formName}
               onChange={(event) => setFormName(event.target.value)}
               required
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
             />
           </div>
 
           {editingDept && (
-            <label className="flex items-center gap-2 text-sm text-zinc-300">
+            <label className="flex items-center gap-2 text-base text-zinc-300">
               <input
                 type="checkbox"
                 checked={formActive}
@@ -203,13 +188,13 @@ export default function DepartmentList() {
           )}
 
           {formError && (
-            <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{formError}</p>
+            <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">{formError}</p>
           )}
 
           <button
             type="submit"
             disabled={saving}
-            className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save'}
           </button>

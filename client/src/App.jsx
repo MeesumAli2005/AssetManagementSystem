@@ -9,7 +9,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
-import Signup from './pages/Signup';
+//import Signup from './pages/Signup';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import EmployeeDetail from './pages/admin/EmployeeDetail';
@@ -17,6 +17,13 @@ import EmployeeList from './pages/admin/EmployeeList';
 import CreateEmployee from './pages/admin/CreateEmployee';
 import DepartmentList from './pages/admin/DepartmentList';
 import MyProfile from './pages/employee/MyProfile';
+import MyAssets from './pages/employee/MyAssets';
+import Acknowledgements from './pages/employee/Acknowledgements';
+import RequestAsset from './pages/employee/RequestAsset';
+import MyRequests from './pages/employee/MyRequests';
+import RequestQueue from './pages/admin/RequestQueue';
+import RequestDetail from './pages/admin/RequestDetail';
+import MyRequestDetail from './pages/employee/RequestDetail';
 
 export default function App() 
 {
@@ -48,14 +55,13 @@ export default function App()
           <Route element={<ProtectedRoute allowedRoles={['employee', 'administrator']} />}>
           <Route element={<Layout />}>
           <Route path="/categories" element={<CategoryList />} />
-          <Route path="/assets" element={<AssetList />} />
           <Route path="/assets/:id" element={<AssetDetail />} />
           </Route>
           </Route>
 
           
           <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+          {/*<Route path="/signup" element={<Signup />} /> */}
 
           {/* Employee-only routes, wrapped in the shared sidebar/topbar Layout */}
           <Route element={<ProtectedRoute allowedRoles={['employee']} />}>
@@ -63,6 +69,11 @@ export default function App()
             <Route element={<Layout />}>
               <Route path="/employee" element={<EmployeeDashboard />} />
               <Route path="/employee/profile" element={<MyProfile />} />
+              <Route path="/employee/my-assets" element={<MyAssets />} />
+              <Route path="/employee/acknowledgements" element={<Acknowledgements />} />
+              <Route path="/employee/requests" element={<MyRequests />} />
+              <Route path="/employee/requests/new" element={<RequestAsset />} />
+              <Route path="/employee/requests/:id" element={<MyRequestDetail />} />
 
             </Route>
           </Route>
@@ -81,10 +92,14 @@ export default function App()
               <Route path="/admin/employees/new" element={<CreateEmployee />} />
 
               <Route path="/assets/new" element={<CreateAsset />} />
-              
+              <Route path="/assets" element={<AssetList />} />
+
               <Route path="/admin/employees/:id" element={<EmployeeDetail />} />
 
               <Route path="/admin/departments" element={<DepartmentList />} />
+
+              <Route path="/admin/requests" element={<RequestQueue />} />
+              <Route path="/admin/requests/:id" element={<RequestDetail />} />
             </Route>
           </Route>
 

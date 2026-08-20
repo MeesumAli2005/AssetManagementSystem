@@ -49,6 +49,7 @@ Table assets {
   purchase_cost decimal
   status varchar [note: 'available, assigned, under_repair, retired']
   condition varchar [note: 'new, good, damaged, etc']
+  usage_state varchar [note: 'active or dormant - employee-set, only meaningful while status = assigned']
   current_assignee_id integer [note: 'nullable - fk to users']
   created_at timestamp
   updated_at timestamp
@@ -91,7 +92,7 @@ Table requests {
 Table asset_history {
   id integer [primary key]
   performed_by integer [note: 'fk to users, nullable for system events']
-  event_type varchar [note: 'purchase, assignment, return, repair, status_change, condition_change, retirement']
+  event_type varchar [note: 'purchase, assignment, return, repair, status_change, condition_change, retirement, acknowledgement, usage_state_change']
   description text
   asset_id integer [not null]
   occurred_at timestamp

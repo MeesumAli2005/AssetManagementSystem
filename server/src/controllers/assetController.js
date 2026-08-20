@@ -4,7 +4,9 @@ import pool from '../config/db.js';
 
 const VALID_STATUSES = ['available', 'assigned', 'under_repair', 'retired'];
 
-const VALID_CONDITIONS = ['new', 'good', 'fair', 'damaged'];
+export const VALID_CONDITIONS = ['new', 'good', 'fair', 'damaged'];
+
+const VALID_USAGE_STATES = ['active', 'dormant'];
 
 
 //Linker function to help route the 3 tables (categories, -> category_specs,-> asset_spec_values) linked together
@@ -46,8 +48,48 @@ async function validateAndWriteSpecValues(connection, assetId, categoryId, specV
 }
 
 
+// Writes an assignment event: the asset_history entry plus the
+// asset_assignments record (close out the previous holder, open a fresh
+// unacknowledged record for the new one). This is what the employee's
+// acknowledgement and "My Assets" views actually read from — the freeform
+// history log is just a human-readable trail. Shared by updateAsset's
+// manual reassignment path and requestController.assignAssetToRequest
+// (fulfilling an approved request), so there's one place that knows how an
+// assignment gets recorded instead of two.
+export async function recordAssignmentEvent(connection, { assetId, performedBy, previousAssigneeId, newAssigneeId, newAssigneeName })
+{
+    const description = newAssigneeId === null
+        ? 'Asset unassigned'
+        : `Assigned to ${newAssigneeName}`;
+
+    await connection.query(
+        `INSERT INTO asset_history (performed_by, event_type, description, asset_id)
+        VALUES (?, 'assignment', ?, ?)`,
+        [performedBy, description, assetId]
+    );
+
+    if (previousAssigneeId !== null)
+    {
+        await connection.query(
+            `UPDATE asset_assignments SET returned_at = NOW(), is_active = 0
+            WHERE asset_id = ? AND is_active = 1`,
+            [assetId]
+        );
+    }
+
+    if (newAssigneeId !== null)
+    {
+        await connection.query(
+            `INSERT INTO asset_assignments (asset_id, employee_id, assigned_by, assigned_at, is_active)
+            VALUES (?, ?, ?, NOW(), 1)`,
+            [assetId, newAssigneeId, performedBy]
+        );
+    }
+}
+
+
 //asset creation part
-export async function createAsset(req, res) 
+export async function createAsset(req, res)
 {
   const connection = await pool.getConnection();
   try 
@@ -347,6 +389,31 @@ export async function getAssetById(req, res) {
 
         const asset = assetRows[0];
 
+        // Admins can view any asset. Employees can only view one they
+        // currently or previously had assigned to them — otherwise this
+        // endpoint would leak every other employee's assignment history and
+        // purchase cost. asset_assignments (any row, active or not) is the
+        // source of truth for "had this asset at some point".
+        if (req.user.role !== 'administrator')
+        {
+            const [assignmentRows] = await pool.query(
+                `SELECT id AS assignment_id, acknowledged_at, assigned_at, is_active
+                FROM asset_assignments WHERE asset_id = ? AND employee_id = ? ORDER BY assigned_at DESC`,
+                [id, req.user.id]
+            );
+
+            const hasAccess = assignmentRows.length > 0 || asset.current_assignee_id === req.user.id;
+            if (!hasAccess)
+            {
+                return res.status(403).json({ message: 'You do not have access to this asset' });
+            }
+
+            // Exposes whether the requester has a pending (unacknowledged)
+            // assignment of this exact asset, so the frontend can offer an
+            // "Acknowledge receipt" action without a second round trip.
+            asset.my_assignment = assignmentRows.find((a) => a.is_active === 1) || null;
+        }
+
         // ------------------------------------------------------------
         // asset history
         const historyResult = await pool.query(
@@ -426,6 +493,16 @@ export async function updateAsset(req, res)
             return res.status(400).json({ message: `condition must be one of: ${VALID_CONDITIONS.join(', ')}` });
         }
 
+        // "assigned" isn't a status you can set directly — it only ever
+        // comes from actually assigning the asset to someone (i.e. this
+        // same request also sending assignee_id). This is the real
+        // enforcement behind "status can't be changed during assignment,
+        // and assignment can't be used to sneak in an arbitrary status."
+        if (status === 'assigned' && assignee_id === undefined)
+        {
+            return res.status(400).json({ message: 'status "assigned" can only be set by assigning the asset to an employee' });
+        }
+
         // assignee_id is optional and tri-state: absent (undefined) means
         // "don't touch it", null means "unassign", a number means "assign
         // to this user" — that's why this can't use `?? existing...` like
@@ -451,11 +528,37 @@ export async function updateAsset(req, res)
             }
         }
 
-        // "assigned" is meaningless without someone to assign it to — this
-        // is the actual source of truth (the frontend also blocks this,
-        // but that's just UX; this is what stops it for real, e.g. if the
-        // API is called directly).
-        const finalStatus = status ?? existing.status;
+        // Status is derived, not client-chosen, whenever this call is
+        // touching the assignment (assignee_id present) — that's what
+        // keeps status from drifting out of sync with current_assignee_id,
+        // and it's the actual enforcement behind "status can't be changed
+        // during assignment." Outside of an assignment call, status is a
+        // plain manual field (used for under_repair / retired / back to
+        // available).
+        let finalStatus;
+        if (assignee_id !== undefined)
+        {
+            if (finalAssigneeId !== null)
+            {
+                finalStatus = 'assigned';
+            }
+            else
+            {
+                // Unassigning only snaps back to "available" if assignment
+                // is what made it unavailable in the first place —
+                // under_repair / retired survive an unassign.
+                finalStatus = existing.status === 'assigned' ? 'available' : existing.status;
+            }
+        }
+        else
+        {
+            finalStatus = status ?? existing.status;
+        }
+
+        // Belt-and-suspenders: structurally this should already be
+        // unreachable given the checks above, but it's cheap insurance
+        // against a future change reintroducing the bug this originally
+        // fixed (status "assigned" with no assignee).
         if (finalStatus === 'assigned' && finalAssigneeId === null)
         {
             return res.status(400).json({ message: 'Cannot set status to "assigned" without an assignee' });
@@ -463,20 +566,29 @@ export async function updateAsset(req, res)
 
         const finalCategoryId = category_id ?? existing.category_id;
 
+        // A fresh assignment (to someone new, including from unassigned)
+        // always starts out "active" — it shouldn't inherit whatever
+        // active/dormant state the previous assignee left it in.
+        const isNewAssignment = assignee_id !== undefined
+            && finalAssigneeId !== existing.current_assignee_id
+            && finalAssigneeId !== null;
+        const finalUsageState = isNewAssignment ? 'active' : existing.usage_state;
+
         await connection.beginTransaction();
 
         await connection.query(
         `UPDATE assets
-        SET name = ?, category_id = ?, purchase_date = ?, purchase_cost = ?, status = ?, \`condition\` = ?, current_assignee_id = ?
+        SET name = ?, category_id = ?, purchase_date = ?, purchase_cost = ?, status = ?, \`condition\` = ?, current_assignee_id = ?, usage_state = ?
         WHERE id = ?`,
         [
             name ?? existing.name,
             finalCategoryId,
             purchase_date ?? existing.purchase_date,
             purchase_cost ?? existing.purchase_cost,
-            status ?? existing.status,
+            finalStatus,
             condition ?? existing.condition,
             finalAssigneeId,
+            finalUsageState,
             id,
         ]
         );
@@ -493,12 +605,17 @@ export async function updateAsset(req, res)
         }
 
         
-        if (status && status !== existing.status) 
+        // Only log a separate status_change entry for status moves made
+        // through the general status field (assignee_id absent) — a status
+        // flip that's purely a side effect of assigning/unassigning is
+        // already captured by the 'assignment' entry below, so logging
+        // both would just be noise.
+        if (assignee_id === undefined && finalStatus !== existing.status)
         {
             await connection.query(
             `INSERT INTO asset_history (performed_by, event_type, description, asset_id)
             VALUES (?, 'status_change', ?, ?)`,
-            [req.user.id, `Status changed from "${existing.status}" to "${status}"`, id]);
+            [req.user.id, `Status changed from "${existing.status}" to "${finalStatus}"`, id]);
         }
 
 
@@ -513,15 +630,13 @@ export async function updateAsset(req, res)
 
         if (assignee_id !== undefined && finalAssigneeId !== existing.current_assignee_id)
         {
-            const description = finalAssigneeId === null
-                ? 'Asset unassigned'
-                : `Assigned to ${assigneeName}`;
-
-            await connection.query(
-                `INSERT INTO asset_history (performed_by, event_type, description, asset_id)
-                VALUES (?, 'assignment', ?, ?)`,
-                [req.user.id, description, id]
-            );
+            await recordAssignmentEvent(connection, {
+                assetId: id,
+                performedBy: req.user.id,
+                previousAssigneeId: existing.current_assignee_id,
+                newAssigneeId: finalAssigneeId,
+                newAssigneeName: assigneeName,
+            });
         }
 
         await connection.commit();
@@ -641,6 +756,221 @@ export async function retireAsset(req, res)
     }
 
     finally {
+        connection.release();
+    }
+}
+
+// ================================================================
+// MY ASSETS (employee self-service)
+// ================================================================
+// Everything currently assigned to the logged-in user, plus a bucketed
+// summary. "under_repair" always wins the bucket over usage_state — an
+// asset being repaired isn't meaningfully "active" or "dormant" right now.
+export async function getMyAssignedAssets(req, res)
+{
+    try
+    {
+        const myId = req.user.id;
+
+        const [assets] = await pool.query(
+            `SELECT
+                a.id, a.asset_tag, a.name, a.status, a.condition, a.usage_state,
+                c.name AS category_name,
+                aa.acknowledged_at, aa.assigned_at
+
+            FROM assets a
+
+            LEFT JOIN categories c
+                ON a.category_id = c.id
+
+            LEFT JOIN asset_assignments aa
+                ON aa.asset_id = a.id AND aa.is_active = 1
+
+            WHERE a.current_assignee_id = ?
+            ORDER BY a.name`,
+            [myId]
+        );
+
+        const summary = { active: 0, dormant: 0, under_repair: 0 };
+        for (const asset of assets)
+        {
+            if (asset.status === 'under_repair') summary.under_repair += 1;
+            else if (asset.usage_state === 'dormant') summary.dormant += 1;
+            else summary.active += 1;
+        }
+
+        return res.json({ data: assets, summary });
+    }
+
+    catch (error)
+    {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error fetching your assets' });
+    }
+}
+
+// ================================================================
+// PENDING ACKNOWLEDGEMENTS (employee self-service)
+// ================================================================
+// Assignments made to the logged-in user that they haven't acknowledged
+// receipt of yet.
+export async function getPendingAcknowledgements(req, res)
+{
+    try
+    {
+        const myId = req.user.id;
+
+        const [rows] = await pool.query(
+            `SELECT
+                aa.id AS assignment_id, aa.assigned_at,
+                a.id AS asset_id, a.asset_tag, a.name, a.condition,
+                c.name AS category_name,
+                u.full_name AS assigned_by_name
+
+            FROM asset_assignments aa
+
+            JOIN assets a
+                ON aa.asset_id = a.id
+
+            LEFT JOIN categories c
+                ON a.category_id = c.id
+
+            LEFT JOIN users u
+                ON aa.assigned_by = u.id
+
+            WHERE aa.employee_id = ? AND aa.is_active = 1 AND aa.acknowledged_at IS NULL
+            ORDER BY aa.assigned_at DESC`,
+            [myId]
+        );
+
+        return res.json(rows);
+    }
+
+    catch (error)
+    {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error fetching pending acknowledgements' });
+    }
+}
+
+// ================================================================
+// ACKNOWLEDGE ASSIGNMENT (employee self-service)
+// ================================================================
+export async function acknowledgeAssignment(req, res)
+{
+    const connection = await pool.getConnection();
+    try
+    {
+        const { id } = req.params; // asset id
+        const myId = req.user.id;
+
+        const [rows] = await connection.query(
+            `SELECT * FROM asset_assignments
+            WHERE asset_id = ? AND employee_id = ? AND is_active = 1 AND acknowledged_at IS NULL
+            ORDER BY assigned_at DESC LIMIT 1`,
+            [id, myId]
+        );
+
+        if (rows.length === 0)
+        {
+            return res.status(404).json({ message: 'No pending assignment to acknowledge for this asset' });
+        }
+
+        await connection.beginTransaction();
+
+        await connection.query(
+            'UPDATE asset_assignments SET acknowledged_at = NOW() WHERE id = ?',
+            [rows[0].id]
+        );
+
+        await connection.query(
+            `INSERT INTO asset_history (performed_by, event_type, description, asset_id)
+            VALUES (?, 'acknowledgement', 'Employee acknowledged receipt of this asset', ?)`,
+            [myId, id]
+        );
+
+        await connection.commit();
+        return res.json({ message: 'Assignment acknowledged' });
+    }
+
+    catch (error)
+    {
+        await connection.rollback();
+        console.error(error);
+        return res.status(500).json({ message: 'Server error acknowledging assignment' });
+    }
+
+    finally
+    {
+        connection.release();
+    }
+}
+
+// ================================================================
+// SET USAGE STATE — active / dormant (employee self-service)
+// ================================================================
+// Only the current assignee can toggle this, and only while the asset is
+// actually assigned — under_repair/retired/available assets don't have a
+// meaningful active/dormant state.
+export async function setUsageState(req, res)
+{
+    const connection = await pool.getConnection();
+    try
+    {
+        const { id } = req.params;
+        const { usage_state } = req.body;
+        const myId = req.user.id;
+
+        if (!VALID_USAGE_STATES.includes(usage_state))
+        {
+            return res.status(400).json({ message: `usage_state must be one of: ${VALID_USAGE_STATES.join(', ')}` });
+        }
+
+        const [rows] = await connection.query('SELECT * FROM assets WHERE id = ?', [id]);
+        if (rows.length === 0)
+        {
+            return res.status(404).json({ message: 'Asset not found' });
+        }
+        const asset = rows[0];
+
+        if (asset.current_assignee_id !== myId)
+        {
+            return res.status(403).json({ message: 'You can only update the usage state of assets assigned to you' });
+        }
+
+        if (asset.status !== 'assigned')
+        {
+            return res.status(400).json({ message: 'Usage state can only be changed while the asset is assigned' });
+        }
+
+        if (usage_state === asset.usage_state)
+        {
+            return res.json({ message: 'Usage state unchanged' });
+        }
+
+        await connection.beginTransaction();
+
+        await connection.query('UPDATE assets SET usage_state = ? WHERE id = ?', [usage_state, id]);
+
+        await connection.query(
+            `INSERT INTO asset_history (performed_by, event_type, description, asset_id)
+            VALUES (?, 'usage_state_change', ?, ?)`,
+            [myId, `Marked as ${usage_state} by employee`, id]
+        );
+
+        await connection.commit();
+        return res.json({ message: `Marked as ${usage_state}` });
+    }
+
+    catch (error)
+    {
+        await connection.rollback();
+        console.error(error);
+        return res.status(400).json({ message: error.message || 'Server error updating usage state' });
+    }
+
+    finally
+    {
         connection.release();
     }
 }
