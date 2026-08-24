@@ -7,6 +7,7 @@ import {
   assignAssetToRequest,
   completeReturn,
   completeRepair,
+  addRequestNote,
 } from '../../api/requests';
 import { getAllAssets } from '../../api/assets';
 import StatusBadge from '../../components/StatusBadge';
@@ -25,6 +26,38 @@ const TYPE_LABELS = {
   return: 'Return',
   repair: 'Repair',
 };
+
+const COMPLETION_LABELS = {
+  asset: 'Asset assigned',
+  return: 'Return completed',
+  repair: 'Repair completed',
+};
+
+// Derives the request's lifecycle timeline from the timestamp/actor fields
+// already on the row — no separate audit table, just presenting what's
+// there in order.
+function buildTimeline(r) {
+  const steps = [{ label: 'Submitted', at: r.created_at, by: r.employee_name }];
+
+  if (r.reviewed_at) {
+    const label = r.status === 'rejected'
+      ? 'Rejected'
+      : r.request_type === 'repair'
+        ? 'Approved — sent for repair'
+        : 'Approved';
+    steps.push({ label, at: r.reviewed_at, by: r.reviewed_by_name });
+  }
+
+  if (r.completed_at) {
+    steps.push({ label: COMPLETION_LABELS[r.request_type], at: r.completed_at, by: r.completed_by_name });
+  }
+
+  if (r.request_type === 'return' && r.acknowledged_at) {
+    steps.push({ label: 'Acknowledged by employee', at: r.acknowledged_at, by: r.employee_name });
+  }
+
+  return steps;
+}
 
 function waitingCaption(r) {
   if (r.status === 'approved' && r.request_type === 'asset') return 'Awaiting asset assignment';
@@ -65,6 +98,9 @@ export default function RequestDetail() {
 
   const [repairCompleteOpen, setRepairCompleteOpen] = useState(false);
   const [repairNotes, setRepairNotes] = useState('');
+
+  const [noteText, setNoteText] = useState('');
+  const [addingNote, setAddingNote] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -166,6 +202,22 @@ export default function RequestDetail() {
     }
   }
 
+  async function handleAddNote(e) {
+    e.preventDefault();
+    if (!noteText.trim()) return;
+    setAddingNote(true);
+    try {
+      await addRequestNote(request.id, noteText.trim());
+      setNoteText('');
+      toast.success('Note added');
+      await load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to add note');
+    } finally {
+      setAddingNote(false);
+    }
+  }
+
   if (loading) return <p className="text-base text-zinc-500">Loading…</p>;
   if (!request) return <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">{error || 'Request not found'}</p>;
 
@@ -230,6 +282,20 @@ export default function RequestDetail() {
         )}
       </div>
 
+      <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm">
+        <p className="mb-3 text-base font-medium text-zinc-300">Lifecycle</p>
+        <ul className="space-y-3 border-l border-zinc-800 pl-4">
+          {buildTimeline(request).map((step, i) => (
+            <li key={i} className="text-base">
+              <p className="text-zinc-200">{step.label}</p>
+              <p className="text-sm text-zinc-500">
+                {new Date(step.at).toLocaleString()}{step.by && ` · ${step.by}`}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </div>
+
       <div className="mt-6 flex flex-wrap gap-3">
         {request.status === 'pending' && (
           <>
@@ -275,6 +341,46 @@ export default function RequestDetail() {
           >
             Mark repaired &amp; returned
           </button>
+        )}
+      </div>
+
+      <div className="mt-8">
+        <h2 className="mb-3 text-lg font-medium text-zinc-200">Internal notes</h2>
+        <p className="mb-3 text-sm text-zinc-500">
+          Private Note, never shown to the employee. Can be added at any point, regardless of status.
+        </p>
+
+        <form onSubmit={handleAddNote} className="mb-4 flex gap-2">
+          <textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            rows={2}
+            placeholder="Add a note…"
+            className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+          />
+          <button
+            type="submit"
+            disabled={addingNote || !noteText.trim()}
+            className="self-start rounded-lg bg-emerald-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {addingNote ? 'Adding…' : 'Add note'}
+          </button>
+        </form>
+
+        {request.notes && request.notes.length > 0 ? (
+          <ul className="space-y-3">
+            {request.notes.map((n) => (
+              <li key={n.id} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+                <p className="text-base text-zinc-200">{n.note}</p>
+                <p className="mt-1 text-sm text-zinc-500">
+                  {n.admin_name} on {new Date(n.created_at).toLocaleString()} — request was{' "'}
+                  <span className="capitalize">{n.status_at_time.replaceAll('_', ' ')}</span> " at the time
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-base text-zinc-500">No notes yet.</p>
         )}
       </div>
 

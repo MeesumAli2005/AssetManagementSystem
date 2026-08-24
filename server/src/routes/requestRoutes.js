@@ -10,6 +10,7 @@ import {
   completeReturn,
   acknowledgeReturn,
   completeRepair,
+  addRequestNote,
 } from '../controllers/requestController.js';
 
 import { requireAuth, requireRole } from '../middleware/auth.js';
@@ -68,7 +69,12 @@ router.get('/mine', requireAuth, getMyRequests);
  *     parameters:
  *       - in: query
  *         name: status
- *         schema: { type: string, enum: [pending, approved, rejected, completed] }
+ *         schema: { type: string, enum: [pending, approved, rejected, completed, sent_for_repair] }
+ *         description: 'status=pending also includes "approved" and "sent_for_repair" — requests that are still waiting on an admin action.'
+ *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *         description: Matches employee name/email, asset name/tag, category name, or reason — across every status.
  *     responses:
  *       200: { description: List of requests }
  *       403: { description: Not an administrator, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
@@ -92,6 +98,34 @@ router.get('/', requireAuth, requireRole('administrator'), getAllRequests);
  *       404: { description: Request not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
 router.get('/:id', requireAuth, getRequestById);
+
+/**
+ * @swagger
+ * /api/requests/{id}/notes:
+ *   post:
+ *     summary: Add an internal note to a request (admin). Allowed regardless of the request's current status — pending, approved, rejected, completed, or sent_for_repair. Never shown to the employee; records who wrote it and what the status was at that moment.
+ *     tags: [Requests]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [note]
+ *             properties:
+ *               note: { type: string }
+ *     responses:
+ *       201: { description: Note added }
+ *       400: { description: note is required, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       403: { description: Not an administrator, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       404: { description: Request not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.post('/:id/notes', requireAuth, requireRole('administrator'), addRequestNote);
 
 /**
  * @swagger

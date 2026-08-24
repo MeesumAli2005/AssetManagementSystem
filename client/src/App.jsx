@@ -1,4 +1,4 @@
-import {Toaster} from 'react-hot-toast';
+import {Toaster, ToastBar, toast} from 'react-hot-toast';
 import CategoryList  from './pages/CategoryList';
 import AssetList from './pages/AssetList';
 import AssetDetail from './pages/AssetDetail';
@@ -19,6 +19,7 @@ import DepartmentList from './pages/admin/DepartmentList';
 import MyProfile from './pages/employee/MyProfile';
 import MyAssets from './pages/employee/MyAssets';
 import Acknowledgements from './pages/employee/Acknowledgements';
+import AcknowledgementDetail from './pages/employee/AcknowledgementDetail';
 import RequestAsset from './pages/employee/RequestAsset';
 import MyRequests from './pages/employee/MyRequests';
 import RequestQueue from './pages/admin/RequestQueue';
@@ -47,8 +48,27 @@ export default function App()
             error: { iconTheme: { primary: '#f87171', secondary: '#18181b' } },   // red-400
           }
         }
-      
-      />
+      >
+        {(t) => (
+          <ToastBar toast={t}>
+            {({ icon, message }) => (
+              <>
+                {icon}
+                {message}
+                {t.type !== 'loading' && (
+                  <button
+                    onClick={() => toast.dismiss(t.id)}
+                    className="ml-1 rounded p-1 text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200"
+                    aria-label="Dismiss"
+                  >
+                    ✕
+                  </button>
+                )}
+              </>
+            )}
+          </ToastBar>
+        )}
+      </Toaster>
         <Routes>
           {/* Public routes — anyone can reach these, logged in or not */}
 
@@ -71,6 +91,7 @@ export default function App()
               <Route path="/employee/profile" element={<MyProfile />} />
               <Route path="/employee/my-assets" element={<MyAssets />} />
               <Route path="/employee/acknowledgements" element={<Acknowledgements />} />
+              <Route path="/employee/acknowledgements/:id" element={<AcknowledgementDetail />} />
               <Route path="/employee/requests" element={<MyRequests />} />
               <Route path="/employee/requests/new" element={<RequestAsset />} />
               <Route path="/employee/requests/:id" element={<MyRequestDetail />} />

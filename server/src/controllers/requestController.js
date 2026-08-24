@@ -137,20 +137,46 @@ export async function getMyRequests(req, res)
 // ================================================================
 // REQUEST QUEUE (admin)
 // ================================================================
-// Supports ?status=pending (defaults to showing everything if omitted).
+// Supports ?status=pending (defaults to showing everything if omitted) and
+// ?search= (matches employee name/email, asset name/tag, category name, or
+// reason — case-insensitive substring, across every status).
+//
+// status=pending is widened to also include "approved" and
+// "sent_for_repair" — those aren't fully done, they're just waiting on the
+// *next* admin action (assign / complete-return / complete-repair), so from
+// the admin's point of view they still belong in the pending pile. The
+// "approved" and "sent_for_repair" filter buttons still exist separately
+// for anyone who wants just those.
 export async function getAllRequests(req, res)
 {
     try
     {
-        const { status } = req.query;
+        const { status, search } = req.query;
         const values = [];
-        let whereClause = '';
+        const conditions = [];
 
-        if (status)
+        if (status === 'pending')
         {
-            whereClause = 'WHERE r.status = ?';
+            conditions.push(`r.status IN ('pending', 'approved', 'sent_for_repair')`);
+        }
+        else if (status)
+        {
+            conditions.push('r.status = ?');
             values.push(status);
         }
+
+        if (search)
+        {
+            conditions.push(`(
+                e.full_name LIKE ? OR e.email LIKE ? OR
+                a.name LIKE ? OR a.asset_tag LIKE ? OR
+                c.name LIKE ? OR r.reason LIKE ?
+            )`);
+            const term = `%${search}%`;
+            values.push(term, term, term, term, term, term);
+        }
+
+        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
         const [rows] = await pool.query(
             `SELECT
@@ -202,6 +228,7 @@ export async function getRequestById(req, res)
                 a.asset_tag,
                 a.status AS asset_status,
                 u.full_name AS reviewed_by_name,
+                cb.full_name AS completed_by_name,
                 ra.name AS resulting_asset_name,
                 ra.asset_tag AS resulting_asset_tag
 
@@ -211,6 +238,7 @@ export async function getRequestById(req, res)
             LEFT JOIN categories c ON r.category_id = c.id
             LEFT JOIN assets a ON r.asset_id = a.id
             LEFT JOIN users u ON r.reviewed_by = u.id
+            LEFT JOIN users cb ON r.completed_by = cb.id
             LEFT JOIN assets ra ON r.resulting_asset_id = ra.id
 
             WHERE r.id = ?`,
@@ -227,13 +255,69 @@ export async function getRequestById(req, res)
             return res.status(403).json({ message: 'This is not your request' });
         }
 
-        return res.json(req.user.role === 'administrator' ? rows[0] : stripPrivateFields(rows[0]));
+        if (req.user.role !== 'administrator')
+        {
+            return res.json(stripPrivateFields(rows[0]));
+        }
+
+        const [notes] = await pool.query(
+            `SELECT n.id, n.note, n.status_at_time, n.created_at, u.full_name AS admin_name
+            FROM request_notes n
+            JOIN users u ON n.admin_id = u.id
+            WHERE n.request_id = ?
+            ORDER BY n.created_at DESC`,
+            [id]
+        );
+
+        return res.json({ ...rows[0], notes });
     }
 
     catch (err)
     {
         console.error(err);
         return res.status(500).json({ message: 'Server error fetching request' });
+    }
+}
+
+// ================================================================
+// ADD INTERNAL NOTE (admin) — a running paper trail on a request
+// ================================================================
+// Unlike review_notes/repair_details (tied to the approve/reject action),
+// this can be added at any time regardless of the request's current status
+// — pending, approved, rejected, completed, sent_for_repair. Each note
+// records who wrote it and what the status was at that moment, and is never
+// shown to the employee.
+export async function addRequestNote(req, res)
+{
+    try
+    {
+        const { id } = req.params;
+        const { note } = req.body;
+
+        if (!note || !note.trim())
+        {
+            return res.status(400).json({ message: 'note is required' });
+        }
+
+        const [rows] = await pool.query('SELECT status FROM requests WHERE id = ?', [id]);
+        if (rows.length === 0)
+        {
+            return res.status(404).json({ message: 'Request not found' });
+        }
+
+        const [result] = await pool.query(
+            `INSERT INTO request_notes (request_id, admin_id, note, status_at_time)
+            VALUES (?, ?, ?, ?)`,
+            [id, req.user.id, note.trim(), rows[0].status]
+        );
+
+        return res.status(201).json({ id: result.insertId, message: 'Note added' });
+    }
+
+    catch (err)
+    {
+        console.error(err);
+        return res.status(500).json({ message: 'Server error adding note' });
     }
 }
 
@@ -451,8 +535,8 @@ export async function assignAssetToRequest(req, res)
         });
 
         await connection.query(
-            'UPDATE requests SET status = ?, resulting_asset_id = ? WHERE id = ?',
-            ['completed', asset_id, id]
+            'UPDATE requests SET status = ?, resulting_asset_id = ?, completed_at = NOW(), completed_by = ? WHERE id = ?',
+            ['completed', asset_id, req.user.id, id]
         );
 
         await connection.commit();
@@ -506,8 +590,8 @@ export async function completeReturn(req, res)
         await connection.beginTransaction();
 
         await connection.query(
-            'UPDATE requests SET status = ?, completion_notes = ? WHERE id = ?',
-            ['completed', notes || null, id]
+            'UPDATE requests SET status = ?, completion_notes = ?, completed_at = NOW(), completed_by = ? WHERE id = ?',
+            ['completed', notes || null, req.user.id, id]
         );
 
         if (notes)
@@ -661,8 +745,8 @@ export async function completeRepair(req, res)
         );
 
         await connection.query(
-            'UPDATE requests SET status = ?, completion_notes = ? WHERE id = ?',
-            ['completed', repair_notes || null, id]
+            'UPDATE requests SET status = ?, completion_notes = ?, completed_at = NOW(), completed_by = ? WHERE id = ?',
+            ['completed', repair_notes || null, req.user.id, id]
         );
 
         await connection.commit();

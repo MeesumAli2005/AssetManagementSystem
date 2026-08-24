@@ -33,6 +33,12 @@ export async function retireAsset(id, reason)
   return response.data;
 }
 
+export async function disposeAsset(id, reason)
+{
+  const response = await api.post(`/assets/${id}/dispose`, { reason });
+  return response.data;
+}
+
 export async function getMyAssets()
 {
   const response = await api.get('/assets/mine');
@@ -42,6 +48,18 @@ export async function getMyAssets()
 export async function getPendingAcknowledgements()
 {
   const response = await api.get('/assets/pending-acknowledgements');
+  return response.data;
+}
+
+export async function getMyAcknowledgements()
+{
+  const response = await api.get('/assets/my-acknowledgements');
+  return response.data;
+}
+
+export async function getAcknowledgementById(id)
+{
+  const response = await api.get(`/assets/acknowledgements/${id}`);
   return response.data;
 }
 

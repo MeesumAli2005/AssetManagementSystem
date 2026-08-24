@@ -31,6 +31,7 @@ function waitingCaption(r) {
 export default function RequestQueue() {
   const [requests, setRequests] = useState([]);
   const [statusFilter, setStatusFilter] = useState('pending');
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -38,7 +39,10 @@ export default function RequestQueue() {
     setLoading(true);
     setError('');
     try {
-      setRequests(await getAllRequests(statusFilter === 'all' ? undefined : statusFilter));
+      setRequests(await getAllRequests({
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        search: search.trim() || undefined,
+      }));
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load requests');
     } finally {
@@ -47,13 +51,23 @@ export default function RequestQueue() {
   }
 
   useEffect(() => {
-    load();
-  }, [statusFilter]);
+    const timeout = setTimeout(load, search ? 300 : 0);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, search]);
 
   return (
     <div>
       <h1 className="mb-1 font-serif text-3xl tracking-tight text-zinc-100">Requests</h1>
       <p className="mb-6 text-base text-zinc-500">Click a request to review, approve, reject, and fulfill it.</p>
+
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search by employee, asset, category, or reason…"
+        className="mb-3 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+      />
 
       <div className="mb-4 flex flex-wrap gap-1.5">
         {STATUS_FILTERS.map((s) => (

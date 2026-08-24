@@ -12,15 +12,21 @@ export async function getMyRequests()
   return response.data;
 }
 
-export async function getAllRequests(status)
+export async function getAllRequests({ status, search } = {})
 {
-  const response = await api.get('/requests', { params: { status } });
+  const response = await api.get('/requests', { params: { status, search } });
   return response.data;
 }
 
 export async function getRequestById(id)
 {
   const response = await api.get(`/requests/${id}`);
+  return response.data;
+}
+
+export async function addRequestNote(id, note)
+{
+  const response = await api.post(`/requests/${id}/notes`, { note });
   return response.data;
 }
 

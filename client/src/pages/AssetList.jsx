@@ -7,7 +7,7 @@ import { getAllEmployees } from '../api/employees';
 import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../context/AuthContext';
 
-const STATUSES = ['available', 'assigned', 'under_repair', 'retired'];
+const STATUSES = ['available', 'assigned', 'under_repair', 'retired', 'disposed'];
 const PAGE_SIZE = 10;
 
 const STATUS_COLORS = {
@@ -15,6 +15,7 @@ const STATUS_COLORS = {
   assigned: 'amber',
   under_repair: 'red',
   retired: 'slate',
+  disposed: 'slate',
 };
 
 export default function AssetList()

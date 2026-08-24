@@ -6,8 +6,11 @@ import {
   getAssetById,
   updateAsset,
   retireAsset,
+  disposeAsset,
   getMyAssignedAssets,
   getPendingAcknowledgements,
+  getMyAcknowledgements,
+  getAcknowledgementById,
   acknowledgeAssignment,
   setUsageState,
 } from '../controllers/assetController.js';
@@ -44,7 +47,7 @@ const router = express.Router();
  *         schema: { type: integer }
  *       - in: query
  *         name: status
- *         schema: { type: string, enum: [available, assigned, under_repair, retired] }
+ *         schema: { type: string, enum: [available, assigned, under_repair, retired, disposed] }
  *       - in: query
  *         name: condition
  *         schema: { type: string, enum: [new, good, fair, damaged] }
@@ -121,9 +124,38 @@ router.get('/pending-acknowledgements', requireAuth, getPendingAcknowledgements)
 
 /**
  * @swagger
+ * /api/assets/my-acknowledgements:
+ *   get:
+ *     summary: List every assignment event the logged-in employee has ever had, acknowledged or not — full history, not just what's pending
+ *     tags: [Assets]
+ *     responses:
+ *       200: { description: List of assignment events }
+ */
+router.get('/my-acknowledgements', requireAuth, getMyAcknowledgements);
+
+/**
+ * @swagger
+ * /api/assets/acknowledgements/{id}:
+ *   get:
+ *     summary: Get full details of a single assignment event (employee self-service — must be your own)
+ *     tags: [Assets]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200: { description: Assignment event detail }
+ *       403: { description: Not your acknowledgement, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       404: { description: Acknowledgement not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.get('/acknowledgements/:id', requireAuth, getAcknowledgementById);
+
+/**
+ * @swagger
  * /api/assets/{id}:
  *   get:
- *     summary: Get one asset with its history, documents, and spec values. Admins can view any asset; employees can only view an asset they currently or previously had assigned to them.
+ *     summary: Get one asset with its documents and spec values. Admins can view any asset (plus its full history log); employees can only view an asset they currently or previously had assigned to them, and only see the history entries that fall within their own assignment window(s).
  *     tags: [Assets]
  *     parameters:
  *       - in: path
@@ -239,6 +271,31 @@ router.put('/:id', requireAuth, requireRole('administrator'), updateAsset);
  *       404: { description: Asset not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
 router.post('/:id/retire', requireAuth, requireRole('administrator'), retireAsset);
+
+/**
+ * @swagger
+ * /api/assets/{id}/dispose:
+ *   post:
+ *     summary: Dispose of an asset (admin only) — a further, terminal step beyond retirement. History is preserved, never deleted.
+ *     tags: [Assets]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason: { type: string, description: 'Defaults to "Asset disposed of" if omitted' }
+ *     responses:
+ *       200: { description: Asset disposed of }
+ *       403: { description: Not an administrator, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       404: { description: Asset not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ */
+router.post('/:id/dispose', requireAuth, requireRole('administrator'), disposeAsset);
 
 /**
  * @swagger

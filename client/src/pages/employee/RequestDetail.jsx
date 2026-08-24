@@ -18,6 +18,38 @@ const TYPE_LABELS = {
   repair: 'Repair',
 };
 
+const COMPLETION_LABELS = {
+  asset: 'Asset assigned',
+  return: 'Return completed',
+  repair: 'Repair completed',
+};
+
+// Derives the request's lifecycle timeline from the timestamp/actor fields
+// already on the row — no separate audit table, just presenting what's
+// there in order.
+function buildTimeline(r) {
+  const steps = [{ label: 'Submitted', at: r.created_at }];
+
+  if (r.reviewed_at) {
+    const label = r.status === 'rejected'
+      ? 'Rejected'
+      : r.request_type === 'repair'
+        ? 'Approved — sent for repair'
+        : 'Approved';
+    steps.push({ label, at: r.reviewed_at, by: r.reviewed_by_name || 'an administrator' });
+  }
+
+  if (r.completed_at) {
+    steps.push({ label: COMPLETION_LABELS[r.request_type], at: r.completed_at, by: r.completed_by_name });
+  }
+
+  if (r.request_type === 'return' && r.acknowledged_at) {
+    steps.push({ label: 'Acknowledged by you', at: r.acknowledged_at });
+  }
+
+  return steps;
+}
+
 function Field({ label, children }) {
   return (
     <div>
@@ -100,12 +132,6 @@ export default function RequestDetail() {
           <Field label="Fulfilled with">{request.resulting_asset_name} ({request.resulting_asset_tag})</Field>
         )}
 
-        <Field label="Submitted">{new Date(request.created_at).toLocaleString()}</Field>
-
-        {request.reviewed_at && (
-          <Field label="Reviewed">{request.reviewed_by_name || 'An administrator'} on {new Date(request.reviewed_at).toLocaleString()}</Field>
-        )}
-
         {request.review_notes && <Field label="Note from administrator">{request.review_notes}</Field>}
 
         {request.completion_notes && (
@@ -113,14 +139,20 @@ export default function RequestDetail() {
             {request.completion_notes}
           </Field>
         )}
+      </div>
 
-        {request.request_type === 'return' && request.status === 'completed' && (
-          <Field label="Your acknowledgement">
-            {request.acknowledged_at
-              ? `Confirmed on ${new Date(request.acknowledged_at).toLocaleString()}`
-              : "You haven't confirmed you sent the asset back yet"}
-          </Field>
-        )}
+      <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm">
+        <p className="mb-3 text-base font-medium text-zinc-300">Lifecycle</p>
+        <ul className="space-y-3 border-l border-zinc-800 pl-4">
+          {buildTimeline(request).map((step, i) => (
+            <li key={i} className="text-base">
+              <p className="text-zinc-200">{step.label}</p>
+              <p className="text-sm text-zinc-500">
+                {new Date(step.at).toLocaleString()}{step.by && ` · ${step.by}`}
+              </p>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {needsReturnAck && (
@@ -129,7 +161,7 @@ export default function RequestDetail() {
           disabled={acking}
           className="mt-6 rounded-lg bg-emerald-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {acking ? 'Acknowledging…' : "Acknowledge I've sent it back"}
+          {acking ? 'Acknowledging…' : "Acknowledge"}
         </button>
       )}
     </div>

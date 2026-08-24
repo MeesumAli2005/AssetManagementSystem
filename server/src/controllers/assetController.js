@@ -415,25 +415,58 @@ export async function getAssetById(req, res) {
         }
 
         // ------------------------------------------------------------
-        // asset history
-        const historyResult = await pool.query(
-            `SELECT
-                h.*,
-                u.full_name AS performed_by_name
+        // asset history. Admins see the full log. Employees only see the
+        // slice that happened during their own assignment window(s) —
+        // joining against their asset_assignments rows for this asset and
+        // keeping only history entries that fall inside at least one of
+        // those [assigned_at, returned_at-or-now) windows. Not the full
+        // audit trail — just "what happened while I had it".
+        let history;
+        if (req.user.role === 'administrator')
+        {
+            const historyResult = await pool.query(
+                `SELECT
+                    h.*,
+                    u.full_name AS performed_by_name
 
-            FROM asset_history h
+                FROM asset_history h
 
-            LEFT JOIN users u
-                ON h.performed_by = u.id
+                LEFT JOIN users u
+                    ON h.performed_by = u.id
 
-            WHERE h.asset_id = ?
+                WHERE h.asset_id = ?
 
-            ORDER BY h.created_at DESC`,
-            [id]
-        );
+                ORDER BY h.created_at DESC`,
+                [id]
+            );
 
+            history = historyResult[0];
+        }
+        else
+        {
+            const historyResult = await pool.query(
+                `SELECT DISTINCT
+                    h.*,
+                    u.full_name AS performed_by_name
 
-        const history = historyResult[0];
+                FROM asset_history h
+
+                JOIN asset_assignments aa
+                    ON aa.asset_id = h.asset_id AND aa.employee_id = ?
+                    AND h.created_at >= aa.assigned_at
+                    AND (aa.returned_at IS NULL OR h.created_at <= aa.returned_at)
+
+                LEFT JOIN users u
+                    ON h.performed_by = u.id
+
+                WHERE h.asset_id = ?
+
+                ORDER BY h.created_at DESC`,
+                [req.user.id, id]
+            );
+
+            history = historyResult[0];
+        }
 
         //asset docs
         const [documents] = await pool.query( `SELECT d.*, u.full_name AS uploaded_by_name
@@ -761,6 +794,86 @@ export async function retireAsset(req, res)
 }
 
 // ================================================================
+// DISPOSE ASSET
+// ================================================================
+// Distinct from retire: retired means pulled from service but still
+// around; disposed means physically gone for good. Same row, no separate
+// table — just a terminal status plus disposed_at, same pattern as
+// retireAsset above.
+export async function disposeAsset(req, res)
+{
+    const connection = await pool.getConnection();
+
+    try {
+
+        const id = req.params.id;
+        const reason = req.body.reason;
+
+        const [existingAssets] = await connection.query(
+            'SELECT * FROM assets WHERE id = ?',
+            [id]
+        );
+
+        if (existingAssets.length === 0) {
+
+            return res.status(404).json({
+                message: 'Asset not found'
+            });
+
+        }
+
+        await connection.beginTransaction();
+
+        await connection.query(
+            `UPDATE assets
+             SET status = 'disposed', disposed_at = NOW()
+             WHERE id = ?`,
+            [id]
+        );
+
+        const disposalReason = reason || 'Asset disposed of';
+
+        await connection.query(
+            `INSERT INTO asset_history
+            (
+                performed_by,
+                event_type,
+                description,
+                asset_id
+            )
+            VALUES (?, 'disposal', ?, ?)`,
+            [
+                req.user.id,
+                disposalReason,
+                id
+            ]
+        );
+
+        await connection.commit();
+
+        return res.json({
+            message: 'Asset disposed of'
+        });
+
+    }
+
+    catch (error) {
+
+        await connection.rollback();
+        console.error(error);
+
+        return res.status(500).json({
+            message: 'Server error disposing of asset'
+        });
+
+    }
+
+    finally {
+        connection.release();
+    }
+}
+
+// ================================================================
 // MY ASSETS (employee self-service)
 // ================================================================
 // Everything currently assigned to the logged-in user, plus a bucketed
@@ -850,6 +963,104 @@ export async function getPendingAcknowledgements(req, res)
     {
         console.error(error);
         return res.status(500).json({ message: 'Server error fetching pending acknowledgements' });
+    }
+}
+
+// ================================================================
+// MY ACKNOWLEDGEMENTS (employee self-service — full history)
+// ================================================================
+// Every assignment event the employee has ever had, acknowledged or not —
+// this is the "click one to see its details" list, as opposed to
+// getPendingAcknowledgements above which is only the ones still needing
+// action.
+export async function getMyAcknowledgements(req, res)
+{
+    try
+    {
+        const myId = req.user.id;
+
+        const [rows] = await pool.query(
+            `SELECT
+                aa.id AS assignment_id, aa.assigned_at, aa.acknowledged_at, aa.returned_at, aa.is_active,
+                a.id AS asset_id, a.asset_tag, a.name, a.condition,
+                c.name AS category_name,
+                u.full_name AS assigned_by_name
+
+            FROM asset_assignments aa
+
+            JOIN assets a
+                ON aa.asset_id = a.id
+
+            LEFT JOIN categories c
+                ON a.category_id = c.id
+
+            LEFT JOIN users u
+                ON aa.assigned_by = u.id
+
+            WHERE aa.employee_id = ?
+            ORDER BY aa.assigned_at DESC`,
+            [myId]
+        );
+
+        return res.json(rows);
+    }
+
+    catch (error)
+    {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error fetching your acknowledgements' });
+    }
+}
+
+// ================================================================
+// ACKNOWLEDGEMENT DETAIL (employee self-service — a single assignment event)
+// ================================================================
+export async function getAcknowledgementById(req, res)
+{
+    try
+    {
+        const { id } = req.params; // assignment id
+        const myId = req.user.id;
+
+        const [rows] = await pool.query(
+            `SELECT
+                aa.id AS assignment_id, aa.assigned_at, aa.acknowledged_at, aa.returned_at, aa.is_active, aa.employee_id,
+                a.id AS asset_id, a.asset_tag, a.name, a.condition, a.status AS asset_status,
+                c.name AS category_name,
+                u.full_name AS assigned_by_name
+
+            FROM asset_assignments aa
+
+            JOIN assets a
+                ON aa.asset_id = a.id
+
+            LEFT JOIN categories c
+                ON a.category_id = c.id
+
+            LEFT JOIN users u
+                ON aa.assigned_by = u.id
+
+            WHERE aa.id = ?`,
+            [id]
+        );
+
+        if (rows.length === 0)
+        {
+            return res.status(404).json({ message: 'Acknowledgement not found' });
+        }
+
+        if (rows[0].employee_id !== myId)
+        {
+            return res.status(403).json({ message: 'This is not your acknowledgement' });
+        }
+
+        return res.json(rows[0]);
+    }
+
+    catch (error)
+    {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error fetching acknowledgement' });
     }
 }
 

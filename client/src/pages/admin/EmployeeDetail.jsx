@@ -12,6 +12,7 @@ const ASSET_STATUS_COLORS = {
   assigned: 'amber',
   under_repair: 'red',
   retired: 'slate',
+  disposed: 'slate',
 };
 
 export default function EmployeeDetail() {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { getAssetById, updateAsset, retireAsset, acknowledgeAssignment } from '../api/assets';
+import { getAssetById, updateAsset, retireAsset, disposeAsset, acknowledgeAssignment } from '../api/assets';
 import { uploadDocument, downloadDocument } from '../api/documents';
 import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
@@ -20,6 +20,7 @@ const STATUS_COLORS = {
   assigned: 'amber',
   under_repair: 'red',
   retired: 'slate',
+  disposed: 'slate',
 };
 
 export default function AssetDetail() {
@@ -38,6 +39,10 @@ export default function AssetDetail() {
   const [retireOpen, setRetireOpen] = useState(false);
   const [retireReason, setRetireReason] = useState('');
   const [retiring, setRetiring] = useState(false);
+
+  const [disposeOpen, setDisposeOpen] = useState(false);
+  const [disposeReason, setDisposeReason] = useState('');
+  const [disposing, setDisposing] = useState(false);
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [file, setFile] = useState(null);
@@ -121,6 +126,22 @@ export default function AssetDetail() {
     }
   }
 
+  async function handleDispose(event) {
+    event.preventDefault();
+    setDisposing(true);
+    try {
+      await disposeAsset(id, disposeReason);
+      toast.success('Asset disposed of');
+      setDisposeOpen(false);
+      setDisposeReason('');
+      await loadAsset();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to dispose of asset');
+    } finally {
+      setDisposing(false);
+    }
+  }
+
   async function handleUpload(event) {
     event.preventDefault();
     if (!file) return;
@@ -168,7 +189,7 @@ export default function AssetDetail() {
             disabled={acking}
             className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-base font-medium text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {acking ? 'Acknowledging…' : 'Acknowledge receipt'}
+            {acking ? 'Acknowledging…' : 'Acknowledge'}
           </button>
         </div>
       )}
@@ -193,6 +214,12 @@ export default function AssetDetail() {
           <p className="text-sm text-zinc-500">Purchase cost</p>
           <p className="text-base text-zinc-100">{formatCurrency(asset.purchase_cost)}</p>
         </div>
+        {!isAdmin && asset.my_assignment && (
+          <div>
+            <p className="text-sm text-zinc-500">Assigned to you since</p>
+            <p className="text-base text-zinc-100">{new Date(asset.my_assignment.assigned_at).toLocaleDateString()}</p>
+          </div>
+        )}
       </div>
 
       {/* Specs */}
@@ -245,7 +272,7 @@ export default function AssetDetail() {
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  disabled={asset.status === 'retired'}
+                  disabled={asset.status === 'retired' || asset.status === 'disposed'}
                   className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {EDITABLE_STATUSES.map((s) => (
@@ -256,7 +283,7 @@ export default function AssetDetail() {
               <select
                 value={condition}
                 onChange={(e) => setCondition(e.target.value)}
-                disabled={asset.status === 'retired'}
+                disabled={asset.status === 'retired' || asset.status === 'disposed'}
                 className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {CONDITIONS.map((c) => (
@@ -265,20 +292,34 @@ export default function AssetDetail() {
               </select>
               <button
                 onClick={handleSaveStatusCondition}
-                disabled={savingStatus || asset.status === 'retired'}
+                disabled={savingStatus || asset.status === 'retired' || asset.status === 'disposed'}
                 className="rounded-lg bg-emerald-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {savingStatus ? 'Saving…' : 'Save'}
               </button>
             </div>
 
-            {asset.status !== 'retired' && (
-              <button
-                onClick={() => { setRetireReason(''); setRetireOpen(true); }}
-                className="text-base font-medium text-red-400 hover:text-red-300"
-              >
-                Retire this asset
-              </button>
+            <div className="flex gap-4">
+              {asset.status !== 'retired' && asset.status !== 'disposed' && (
+                <button
+                  onClick={() => { setRetireReason(''); setRetireOpen(true); }}
+                  className="text-base font-medium text-red-400 hover:text-red-300"
+                >
+                  Retire this asset
+                </button>
+              )}
+              {asset.status !== 'disposed' && (
+                <button
+                  onClick={() => { setDisposeReason(''); setDisposeOpen(true); }}
+                  className="text-base font-medium text-red-400 hover:text-red-300"
+                >
+                  Dispose of this asset
+                </button>
+              )}
+            </div>
+
+            {asset.status === 'disposed' && asset.disposed_at && (
+              <p className="mt-3 text-base text-zinc-500">Disposed of on {new Date(asset.disposed_at).toLocaleDateString()}</p>
             )}
           </div>
         </>
@@ -316,9 +357,11 @@ export default function AssetDetail() {
         )}
       </div>
 
-      {/* History */}
+      {/* History — admins see everything; employees see only what happened
+          during their own assignment window(s), scoped server-side */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm">
-        <p className="mb-3 text-base font-medium text-zinc-300">History</p>
+        <p className="mb-1 text-base font-medium text-zinc-300">History</p>
+        {!isAdmin && <p className="mb-3 text-sm text-zinc-500">While this asset was assigned to you.</p>}
         {asset.history.length === 0 ? (
           <p className="text-base text-zinc-500">No history yet.</p>
         ) : (
@@ -352,6 +395,30 @@ export default function AssetDetail() {
             className="w-full rounded-lg bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {retiring ? 'Retiring…' : 'Retire Asset'}
+          </button>
+        </form>
+      </Modal>
+
+      <Modal open={disposeOpen} onClose={() => setDisposeOpen(false)} title="Dispose of asset">
+        <form onSubmit={handleDispose} className="space-y-4">
+          <p className="text-base text-zinc-400">
+            This is a further, terminal step beyond retirement — the asset is physically gone for good. Its history is preserved.
+          </p>
+          <div>
+            <label className="mb-1.5 block text-base font-medium text-zinc-300">Reason</label>
+            <textarea
+              value={disposeReason}
+              onChange={(e) => setDisposeReason(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={disposing}
+            className="w-full rounded-lg bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {disposing ? 'Disposing…' : 'Dispose of Asset'}
           </button>
         </form>
       </Modal>

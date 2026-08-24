@@ -64,7 +64,6 @@ const ICONS = {
       d="M9 12h6m-6 4h6m-7 5h8a2 2 0 0 0 2-2V7.5L14.5 3H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2Zm6-16.5V8h4.5"
     />
   ),
-
   
 };
 
@@ -119,7 +118,7 @@ export default function Layout()
     async function loadCounts() {
       try {
         if (user.role === 'administrator') {
-          const pending = await getAllRequests('pending');
+          const pending = await getAllRequests({ status: 'pending' });
           if (!cancelled) setCounts({ reqs: pending.length });
         } else {
           const [pendingAcks, myRequests] = await Promise.all([
@@ -141,8 +140,8 @@ export default function Layout()
   }, [user.role, location.pathname]);
 
   return (
-    <div className="flex min-h-screen bg-zinc-950 text-zinc-100 [background:radial-gradient(ellipse_1200px_500px_at_50%_-10%,rgba(16,185,129,0.10),transparent)]">
-      <aside className="flex w-56 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/60 px-4 py-6">
+    <div className="flex h-screen bg-zinc-950 text-zinc-100 [background:radial-gradient(ellipse_1200px_500px_at_50%_-10%,rgba(16,185,129,0.10),transparent)] overflow-hidden">
+      <aside className="flex w-64 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/60 px-4 py-6">
         <div className="mb-8 flex items-center gap-2 px-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 text-base font-bold text-zinc-950 shadow-[0_0_20px_-4px_rgba(16,185,129,0.7)]">
             A
@@ -177,9 +176,14 @@ export default function Layout()
             );
           })}
         </nav>
+        <button
+          onClick={logout}
+          className="rounded-lg border border-zinc-700 bg-zinc-800 px-3.5 py-1.5 text-base font-medium text-zinc-200 transition hover:bg-zinc-700">
+          Logout
+        </button>
       </aside>
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/40 px-8 py-4 backdrop-blur">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400/30 to-emerald-600/30 text-base font-semibold text-emerald-300">
@@ -190,15 +194,10 @@ export default function Layout()
               <p className="text-sm capitalize text-zinc-500">{user.role}</p>
             </div>
           </div>
-          <button
-            onClick={logout}
-            className="rounded-lg border border-zinc-700 bg-zinc-800 px-3.5 py-1.5 text-base font-medium text-zinc-200 transition hover:bg-zinc-700"
-          >
-            Logout
-          </button>
+
         </header>
 
-        <main className="flex-1 px-8 py-10">
+        <main className="flex-1 overflow-y-auto px-8 py-10">
           <div className="mx-auto max-w-2xl">
             <Outlet />
           </div>

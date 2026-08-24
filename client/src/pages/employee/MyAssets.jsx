@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getMyAssets, setAssetUsageState } from '../../api/assets';
 import StatusBadge from '../../components/StatusBadge';
@@ -8,6 +9,7 @@ const STATUS_COLORS = {
   assigned: 'amber',
   under_repair: 'red',
   retired: 'slate',
+  disposed: 'slate',
 };
 
 export default function MyAssets() {
@@ -75,35 +77,40 @@ export default function MyAssets() {
       {!loading && !error && (
         <ul className="divide-y divide-zinc-800 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60 shadow-sm">
           {assets.map((asset) => (
-            <li key={asset.id} className="flex items-center justify-between px-4 py-3.5">
-              <div>
-                <p className="text-base font-medium text-zinc-100">
-                  {asset.name} <span className="font-normal text-zinc-500">({asset.asset_tag})</span>
-                </p>
-                <p className="text-sm text-zinc-500">{asset.category_name || '—'}</p>
-                {!asset.acknowledged_at && (
-                  <p className="mt-1 text-sm text-amber-400">Receipt not yet acknowledged</p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <StatusBadge text={asset.status.replace('_', ' ')} color={STATUS_COLORS[asset.status]} />
-                <StatusBadge text={asset.condition} color="slate" />
-                {asset.status === 'assigned' && (
-                  <StatusBadge
-                    text={asset.usage_state}
-                    color={asset.usage_state === 'active' ? 'green' : 'slate'}
-                  />
-                )}
-                {asset.status === 'assigned' && (
-                  <button
-                    onClick={() => handleToggleUsage(asset)}
-                    disabled={togglingId === asset.id}
-                    className="text-sm font-medium text-emerald-400 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Mark {asset.usage_state === 'active' ? 'dormant' : 'active'}
-                  </button>
-                )}
-              </div>
+            <li key={asset.id}>
+              <Link
+                to={`/assets/${asset.id}`}
+                className="flex items-center justify-between px-4 py-3.5 transition hover:bg-zinc-800/40"
+              >
+                <div>
+                  <p className="text-base font-medium text-zinc-100">
+                    {asset.name} <span className="font-normal text-zinc-500">({asset.asset_tag})</span>
+                  </p>
+                  <p className="text-sm text-zinc-500">{asset.category_name || '—'}</p>
+                  {!asset.acknowledged_at && (
+                    <p className="mt-1 text-sm text-amber-400">Receipt not yet acknowledged</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <StatusBadge text={asset.status.replace('_', ' ')} color={STATUS_COLORS[asset.status]} />
+                  <StatusBadge text={asset.condition} color="slate" />
+                  {asset.status === 'assigned' && (
+                    <StatusBadge
+                      text={asset.usage_state}
+                      color={asset.usage_state === 'active' ? 'green' : 'slate'}
+                    />
+                  )}
+                  {asset.status === 'assigned' && (
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleUsage(asset); }}
+                      disabled={togglingId === asset.id}
+                      className="text-sm font-medium text-emerald-400 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Mark {asset.usage_state === 'active' ? 'dormant' : 'active'}
+                    </button>
+                  )}
+                </div>
+              </Link>
             </li>
           ))}
           {assets.length === 0 && (
