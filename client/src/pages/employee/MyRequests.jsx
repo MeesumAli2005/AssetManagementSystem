@@ -42,7 +42,7 @@ export default function MyRequests() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="mb-1 font-serif text-3xl tracking-tight text-zinc-100">My Requests</h1>
+          <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">My Requests</h1>
           <p className="text-base text-zinc-500">Click a request to see its full status and details.</p>
         </div>
         <Link
@@ -70,7 +70,7 @@ export default function MyRequests() {
                     <p className="text-base font-medium text-zinc-100">
                       {TYPE_LABELS[r.request_type]}
                       {r.category_name && <span className="font-normal text-zinc-500"> · {r.category_name}</span>}
-                      {r.asset_name && <span className="font-normal text-zinc-500"> · {r.asset_name} ({r.asset_tag})</span>}
+                      {r.asset_name && <span className="font-normal text-zinc-500"> · {r.asset_name}</span>}
                     </p>
                     <p className="mt-0.5 text-base text-zinc-500">{r.reason}</p>
                     <p className="mt-1 text-base text-zinc-600">

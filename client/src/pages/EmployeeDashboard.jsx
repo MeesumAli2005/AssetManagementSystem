@@ -1,49 +1,53 @@
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getMyAssets } from '../api/assets';
+import StatTile from '../components/StatTile';
+import BarBreakdown from '../components/BarBreakdown';
+
+const CONDITION_ROWS = [
+  { key: 'new', color: 'green' },
+  { key: 'good', color: 'green' },
+  { key: 'fair', color: 'amber' },
+  { key: 'damaged', color: 'red' },
+];
 
 export default function EmployeeDashboard() {
   const { user } = useAuth();
+  const [assets, setAssets] = useState(null);
+
+  useEffect(() => {
+    getMyAssets().then((result) => setAssets(result.data)).catch(() => {});
+  }, []);
+
+  const byCondition = { new: 0, good: 0, fair: 0, damaged: 0 };
+  for (const asset of assets || []) {
+    if (byCondition[asset.condition] !== undefined) byCondition[asset.condition] += 1;
+  }
 
   return (
     <div>
-      <h1 className="mb-1 font-serif text-3xl tracking-tight text-zinc-100">
+      <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">
         Welcome, {user.full_name || user.email}
       </h1>
       <p className="mb-8 text-base text-zinc-500">Here's your workspace.</p>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-        <Link
-          to="/employee/profile"
-          className="inline-block rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-500/30 hover:shadow-lg hover:shadow-black/20"
-        >
-          <p className="font-medium text-zinc-100">My Profile</p>
-          <p className="mt-1 text-sm text-zinc-500">View your details and departments</p>
-        </Link>
+      {assets && (
+        <>
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <StatTile label="Assets assigned to me" value={assets.length} />
+            <StatTile label="Under repair" value={assets.filter((a) => a.status === 'under_repair').length} />
+          </div>
 
-        <Link
-          to="/employee/my-assets"
-          className="inline-block rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-500/30 hover:shadow-lg hover:shadow-black/20"
-        >
-          <p className="font-medium text-zinc-100">My Assets</p>
-          <p className="mt-1 text-sm text-zinc-500">Status, condition, and usage summary</p>
-        </Link>
-
-        <Link
-          to="/employee/acknowledgements"
-          className="inline-block rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-500/30 hover:shadow-lg hover:shadow-black/20"
-        >
-          <p className="text-lg break-words text-zinc-100">Acknowledgements</p>
-          <p className="mt-1 text-sm text-zinc-500">Confirm receipt of newly as assets</p>
-        </Link>
-
-        <Link
-          to="/employee/requests"
-          className="inline-block rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-500/30 hover:shadow-lg hover:shadow-black/20"
-        >
-          <p className="font-medium text-zinc-100">Requests</p>
-          <p className="mt-1 text-sm text-zinc-500">Request a new asset, return, or repair</p>
-        </Link>
-      </div>
+          {assets.length > 0 && (
+            <div className="mb-8">
+              <BarBreakdown
+                title="My assets by condition"
+                rows={CONDITION_ROWS.map((row) => ({ label: row.key, value: byCondition[row.key], color: row.color }))}
+              />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

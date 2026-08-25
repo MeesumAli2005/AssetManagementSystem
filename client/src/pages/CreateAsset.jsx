@@ -10,8 +10,7 @@ export default function CreateAsset() {
   const navigate = useNavigate();
 
   const [categories, setCategories] = useState([]);
-  const [assetTag, setAssetTag] = useState('');
-  const [name, setName] = useState('');
+  const [brand, setBrand] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [purchaseDate, setPurchaseDate] = useState('');
   const [purchaseCost, setPurchaseCost] = useState('');
@@ -52,15 +51,14 @@ export default function CreateAsset() {
         }));
 
       const created = await createAsset({
-        asset_tag: assetTag,
-        name,
+        brand,
         category_id: categoryId || undefined,
         purchase_date: purchaseDate || undefined,
         purchase_cost: purchaseCost || undefined,
         condition,
         spec_values,
       });
-      toast.success(`"${name}" created`);
+      toast.success(`"${created.name}" created`);
       navigate(`/assets/${created.id}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create asset');
@@ -71,30 +69,20 @@ export default function CreateAsset() {
 
   return (
     <div className="max-w-md">
-      <h1 className="mb-1 font-serif text-3xl tracking-tight text-zinc-100">New Asset</h1>
+      <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">New Asset</h1>
       <p className="mb-6 text-base text-zinc-500">Add an item to inventory.</p>
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm">
         <div>
-          <label className="mb-1.5 block text-base font-medium text-zinc-300">Asset tag</label>
+          <label className="mb-1.5 block text-base font-medium text-zinc-300">Brand</label>
           <input
             type="text"
-            value={assetTag}
-            onChange={(e) => setAssetTag(e.target.value)}
+            value={brand}
+            onChange={(e) => setBrand(e.target.value)}
             required
             className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
           />
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-base font-medium text-zinc-300">Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-          />
+          <p className="mt-1.5 text-sm text-zinc-500">This is required.</p>
         </div>
 
         <div>

@@ -31,11 +31,10 @@ export default function App()
   return (
     <AuthProvider>
       <BrowserRouter>
-
       <Toaster
         position='top-right'
 
-        toastOptions=
+        toastOptions= 
         {
           {
             style:
@@ -59,8 +58,7 @@ export default function App()
                   <button
                     onClick={() => toast.dismiss(t.id)}
                     className="ml-1 rounded p-1 text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200"
-                    aria-label="Dismiss"
-                  >
+                    aria-label="Dismiss">
                     ✕
                   </button>
                 )}

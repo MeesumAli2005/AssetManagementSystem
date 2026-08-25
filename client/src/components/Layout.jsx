@@ -115,23 +115,29 @@ export default function Layout()
   useEffect(() => {
     let cancelled = false;
 
-    async function loadCounts() {
-      try {
-        if (user.role === 'administrator') {
-          const pending = await getAllRequests({ status: 'pending' });
-          if (!cancelled) setCounts({ reqs: pending.length });
-        } else {
-          const [pendingAcks, myRequests] = await Promise.all([
-            getPendingAcknowledgements(),
-            getMyRequests(),
-          ]);
-          const pendingReturnAcks = myRequests.filter(
-            (r) => r.request_type === 'return' && r.status === 'completed' && !r.acknowledged_at
-          ).length;
-          if (!cancelled) setCounts({ acks: pendingAcks.length + pendingReturnAcks });
-        }
-      } catch {
-        // Badge counts are a convenience, not critical — fail silently.
+    async function loadCounts() 
+    {
+      try 
+      {
+        if (user.role === 'administrator') 
+          {
+            const pending = await getAllRequests({ status: 'pending' });
+            if (!cancelled) setCounts({ reqs: pending.length });
+          } 
+          
+          else 
+          {
+            const [pendingAcks, myRequests] = await Promise.all([getPendingAcknowledgements(), getMyRequests(),]);
+            const pendingReturnAcks = myRequests.filter(
+            (r) => r.request_type === 'return' && r.status === 'completed' && !r.acknowledged_at).length;
+
+            if (!cancelled) setCounts({ acks: pendingAcks.length + pendingReturnAcks });
+          }
+      } 
+      
+      catch 
+      {
+
       }
     }
 
@@ -140,13 +146,12 @@ export default function Layout()
   }, [user.role, location.pathname]);
 
   return (
-    <div className="flex h-screen bg-zinc-950 text-zinc-100 [background:radial-gradient(ellipse_1200px_500px_at_50%_-10%,rgba(16,185,129,0.10),transparent)] overflow-hidden">
+    <div className="flex h-screen text-zinc-100 overflow-hidden">
       <aside className="flex w-64 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/60 px-4 py-6">
-        <div className="mb-8 flex items-center gap-2 px-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 text-base font-bold text-zinc-950 shadow-[0_0_20px_-4px_rgba(16,185,129,0.7)]">
-            A
+        <div className="mb-8 px-2">
+          <div className="inline-block rounded-lg bg-emerald-600 px-3 py-1.5 font-serif text-base font-semibold text-zinc-950">
+            Asset Manager
           </div>
-          <span className="font-serif text-lg tracking-tight text-zinc-100">Asset Manager</span>
         </div>
 
         <nav className="flex flex-1 flex-col gap-1">

@@ -56,7 +56,7 @@ export default function RequestAsset() {
 
   return (
     <div>
-      <h1 className="mb-1 font-serif text-3xl tracking-tight text-zinc-100">Request Asset</h1>
+      <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">Request Asset</h1>
       <p className="mb-6 text-base text-zinc-500">Request a new asset, or a return/repair for one already assigned to you.</p>
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm">
@@ -99,7 +99,7 @@ export default function RequestAsset() {
             >
               <option value="" disabled>Select an asset…</option>
               {myAssets.map((a) => (
-                <option key={a.id} value={a.id}>{a.name} ({a.asset_tag})</option>
+                <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
             {myAssets.length === 0 && (

@@ -71,8 +71,8 @@ export default function AcknowledgementDetail() {
 
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="font-serif text-3xl tracking-tight text-zinc-100">
-            {item.name} <span className="text-xl font-normal text-zinc-500">({item.asset_tag})</span>
+          <h1 className="font-serif text-3xl font-bold tracking-tight text-zinc-100">
+            {item.name}
           </h1>
         </div>
         <StatusBadge text={status.text} color={status.color} />

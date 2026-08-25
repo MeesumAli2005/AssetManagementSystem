@@ -1,10 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 @import "tailwindcss";
 
 @theme
 {
-  --font-sans: 'IBM Plex Serif', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
-  --font-serif: 'IBM Plex Serif', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Elms Sans', -apple-system, 'Segoe UI', Arial, sans-serif;
+  --font-serif: 'Elms Sans', -apple-system, 'Segoe UI', Arial, sans-serif;
 }
 
 :root {
@@ -22,6 +22,6 @@ body,
 
 body {
   margin: 0;
-  background: #437af03b;
+  background: #626d851f;
   font-family: var(--font-sans);
 }

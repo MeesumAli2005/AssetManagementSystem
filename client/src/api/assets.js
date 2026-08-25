@@ -74,3 +74,9 @@ export async function setAssetUsageState(assetId, usage_state)
   const response = await api.patch(`/assets/${assetId}/usage-state`, { usage_state });
   return response.data;
 }
+
+export async function getAssetStats()
+{
+  const response = await api.get('/assets/stats');
+  return response.data;
+}

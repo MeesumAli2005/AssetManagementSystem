@@ -94,8 +94,8 @@ export default function AssetList()
         <div>
             <div className="mb-6 flex items-center justify-between">
                 <div>
-                    <h1 className="font-serif text-3xl tracking-tight text-zinc-100">Assets</h1>
-                    <p className="mt-1 text-base text-zinc-500">Search, filter, and track your inventory.</p>
+                    <h1 className="font-serif text-3xl font-bold tracking-tight text-zinc-100">Assets</h1>
+                    <p className="mt-1 text-base text-zinc-500">Track your inventory:</p>
                 </div>
                 {isAdmin && (
                     <Link
@@ -110,7 +110,7 @@ export default function AssetList()
             <div className="mb-4 flex flex-wrap gap-3">
                 <input
                     type="text"
-                    placeholder="Search by name or asset tag…"
+                    placeholder="Search by name…"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-64 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 placeholder:text-zinc-500 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
@@ -175,7 +175,6 @@ export default function AssetList()
                         <table className="w-full border-collapse text-base">
                             <thead className="bg-zinc-800/50 text-left">
                                 <tr>
-                                    <th className="px-4 py-2.5 font-medium text-zinc-400">Asset Tag</th>
                                     <th className="px-4 py-2.5 font-medium text-zinc-400">Name</th>
                                     <th className="px-4 py-2.5 font-medium text-zinc-400">Category</th>
                                     <th className="px-4 py-2.5 font-medium text-zinc-400">Assignee</th>
@@ -186,8 +185,7 @@ export default function AssetList()
                             <tbody>
                                 {assets.map((asset) => (
                                     <tr key={asset.id} className="border-t border-zinc-800 hover:bg-zinc-800/40">
-                                        <td className="px-4 py-2.5 font-medium text-zinc-100">{asset.asset_tag}</td>
-                                        <td className="px-4 py-2.5 text-zinc-300">{asset.name}</td>
+                                        <td className="px-4 py-2.5 font-medium text-zinc-100">{asset.name}</td>
                                         <td className="px-4 py-2.5 text-zinc-400">{asset.category_name || '—'}</td>
                                         <td className="px-4 py-2.5 text-zinc-400">{asset.current_assignee_name || '—'}</td>
                                         <td className="px-4 py-2.5">
@@ -208,7 +206,7 @@ export default function AssetList()
                                 ))}
                                 {assets.length === 0 && (
                                     <tr>
-                                        <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
+                                        <td colSpan={5} className="px-4 py-6 text-center text-zinc-500">
                                             No assets found.
                                         </td>
                                     </tr>

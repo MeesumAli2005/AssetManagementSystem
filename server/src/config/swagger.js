@@ -109,8 +109,9 @@ const options = {
           type: 'object',
           properties: {
             id: { type: 'integer' },
-            asset_tag: { type: 'string' },
-            name: { type: 'string' },
+            asset_tag: { type: 'string', description: 'Auto-generated (AST-<id>), not admin-supplied' },
+            name: { type: 'string', description: 'Derived: "<brand> <category> #<id>"' },
+            brand: { type: 'string', nullable: true },
             category_id: { type: 'integer' },
             category_name: { type: 'string' },
             purchase_date: { type: 'string', format: 'date' },

@@ -33,7 +33,7 @@ export default function CreateEmployee() {
 
   return (
     <div className="max-w-md">
-      <h1 className="mb-1 font-serif text-3xl tracking-tight text-zinc-100">New Employee</h1>
+      <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">New Employee</h1>
       <p className="mb-6 text-base text-zinc-500">Create an account and share the temporary password.</p>
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm">

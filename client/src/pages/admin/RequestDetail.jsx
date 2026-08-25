@@ -229,7 +229,7 @@ export default function RequestDetail() {
 
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="font-serif text-3xl tracking-tight text-zinc-100">
+          <h1 className="font-serif text-3xl font-bold tracking-tight text-zinc-100">
             {TYPE_LABELS[request.request_type]} request
           </h1>
           <p className="text-base text-zinc-500">{request.employee_name} · {request.employee_email}</p>
@@ -249,12 +249,12 @@ export default function RequestDetail() {
 
         {request.asset_name && (
           <Field label="Asset">
-            {request.asset_name} ({request.asset_tag}) — currently {request.asset_status?.replaceAll('_', ' ')}
+            {request.asset_name} — currently {request.asset_status?.replaceAll('_', ' ')}
           </Field>
         )}
 
         {request.resulting_asset_name && (
-          <Field label="Fulfilled with">{request.resulting_asset_name} ({request.resulting_asset_tag})</Field>
+          <Field label="Fulfilled with">{request.resulting_asset_name}</Field>
         )}
 
         <Field label="Submitted">{new Date(request.created_at).toLocaleString()}</Field>
@@ -345,7 +345,7 @@ export default function RequestDetail() {
       </div>
 
       <div className="mt-8">
-        <h2 className="mb-3 text-lg font-medium text-zinc-200">Internal notes</h2>
+        <h2 className="mb-3 text-lg font-bold text-zinc-200">Internal notes</h2>
         <p className="mb-3 text-sm text-zinc-500">
           Private Note, never shown to the employee. Can be added at any point, regardless of status.
         </p>
@@ -435,7 +435,7 @@ export default function RequestDetail() {
             >
               <option value="" disabled>Select an asset…</option>
               {availableAssets.map((a) => (
-                <option key={a.id} value={a.id}>{a.name} ({a.asset_tag})</option>
+                <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
             {availableAssets.length === 0 && (
@@ -456,7 +456,7 @@ export default function RequestDetail() {
         <form onSubmit={handleCompleteReturn} className="space-y-4">
           <p className="text-base text-zinc-400">
             Confirming {request.employee_name}'s return of{' '}
-            <span className="text-zinc-200">{request.asset_name} ({request.asset_tag})</span> has been physically received.
+            <span className="text-zinc-200">{request.asset_name}</span> has been physically received.
           </p>
           <div>
             <label className="mb-1.5 block text-base font-medium text-zinc-300">Notes (optional)</label>
@@ -480,7 +480,7 @@ export default function RequestDetail() {
       <Modal open={repairCompleteOpen} onClose={() => setRepairCompleteOpen(false)} title="Mark repaired & returned">
         <form onSubmit={handleCompleteRepair} className="space-y-4">
           <p className="text-base text-zinc-400">
-            Confirming <span className="text-zinc-200">{request.asset_name} ({request.asset_tag})</span> has been repaired and returned to {request.employee_name}.
+            Confirming <span className="text-zinc-200">{request.asset_name}</span> has been repaired and returned to {request.employee_name}.
           </p>
           <div>
             <label className="mb-1.5 block text-base font-medium text-zinc-300">Repair completion notes (optional)</label>

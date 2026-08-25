@@ -110,7 +110,7 @@ export default function CategoryList() {
     <div className="max-w-2xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="font-serif text-3xl tracking-tight text-zinc-100">Categories</h1>
+          <h1 className="font-serif text-3xl font-bold tracking-tight text-zinc-100">Categories</h1>
           <p className="mt-1 text-base text-zinc-500">Asset categories and the specs each one tracks.</p>
         </div>
         {isAdmin && (

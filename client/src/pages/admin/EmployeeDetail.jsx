@@ -181,7 +181,7 @@ export default function EmployeeDetail() {
     <div className="max-w-2xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="font-serif text-3xl tracking-tight text-zinc-100">{employee.full_name}</h1>
+          <h1 className="font-serif text-3xl font-bold tracking-tight text-zinc-100">{employee.full_name}</h1>
           <p className="text-base text-zinc-500">{employee.email}</p>
         </div>
         <div className="flex items-center gap-3">
@@ -254,7 +254,7 @@ export default function EmployeeDetail() {
           >
             <option value="">Select an available asset…</option>
             {availableAssets.map((a) => (
-              <option key={a.id} value={a.id}>{a.name} ({a.asset_tag})</option>
+              <option key={a.id} value={a.id}>{a.name}</option>
             ))}
           </select>
           <button
@@ -288,7 +288,7 @@ export default function EmployeeDetail() {
               <li key={asset.id} className="flex items-center justify-between py-3">
                 <div>
                   <p className="text-base font-medium text-zinc-100">
-                    {asset.name} <span className="font-normal text-zinc-500">({asset.asset_tag})</span>
+                    {asset.name}
                   </p>
                   {/* Status and condition are read-only here — this page only
                       manages who has the asset, not its status/condition. */}

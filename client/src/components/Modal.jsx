@@ -34,7 +34,7 @@ export default function Modal({ open, onClose, title, children, size = 'md' })
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="font-serif text-lg tracking-tight text-zinc-4000">{title}</h2>
+          <h2 className="font-serif text-lg font-bold tracking-tight text-zinc-100">{title}</h2>
           <button
             onClick={onClose}
             className="rounded-md p-1 text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300"

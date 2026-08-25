@@ -110,7 +110,7 @@ export default function RequestDetail() {
 
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="font-serif text-3xl tracking-tight text-zinc-100">
+          <h1 className="font-serif text-3xl font-bold tracking-tight text-zinc-100">
             {TYPE_LABELS[request.request_type]} request
           </h1>
         </div>
@@ -125,11 +125,11 @@ export default function RequestDetail() {
         {request.category_name && <Field label="Category">{request.category_name}</Field>}
 
         {request.asset_name && (
-          <Field label="Asset">{request.asset_name} ({request.asset_tag})</Field>
+          <Field label="Asset">{request.asset_name}</Field>
         )}
 
         {request.resulting_asset_name && (
-          <Field label="Fulfilled with">{request.resulting_asset_name} ({request.resulting_asset_tag})</Field>
+          <Field label="Fulfilled with">{request.resulting_asset_name}</Field>
         )}
 
         {request.review_notes && <Field label="Note from administrator">{request.review_notes}</Field>}

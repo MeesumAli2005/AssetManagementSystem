@@ -38,7 +38,7 @@ export default function EmployeeList() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="font-serif text-3xl tracking-tight text-zinc-100">Employees</h1>
+          <h1 className="font-serif text-3xl font-bold tracking-tight text-zinc-100">Employees</h1>
           <p className="mt-1 text-base text-zinc-500">Search, filter, and manage employee accounts.</p>
         </div>
         <Link

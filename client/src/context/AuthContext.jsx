@@ -21,6 +21,8 @@ export function AuthProvider({ children })
     return user; 
   }
 
+  // we are removing this api cuz signup is not needed
+
   // async function signup(full_name, email, password) 
   // {
   //   await api.post('/auth/signup', { full_name, email, password });

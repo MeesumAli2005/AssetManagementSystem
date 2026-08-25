@@ -96,8 +96,7 @@ export async function createAsset(req, res)
     {
 
         const {
-        asset_tag,
-        name,
+        brand,
         category_id,
         purchase_date,
         purchase_cost,
@@ -105,9 +104,9 @@ export async function createAsset(req, res)
         spec_values,
         } = req.body;
 
-        if (!asset_tag || !name)
+        if (!brand)
         {
-            return res.status(400).json({ message: 'asset_tag and name are required' });
+            return res.status(400).json({ message: 'brand is required' });
         }
 
         if (!category_id)
@@ -122,33 +121,42 @@ export async function createAsset(req, res)
 
         await connection.beginTransaction();
 
-        const [existing] = await connection.query('SELECT id FROM assets WHERE asset_tag = ?', [asset_tag]);
-        if (existing.length > 0) 
+        const [categoryRows] = await connection.query('SELECT name FROM categories WHERE id = ?', [category_id]);
+        if (categoryRows.length === 0)
         {
             await connection.rollback();
-            return res.status(409).json({ message: 'An asset with this asset_tag already exists' });
+            return res.status(400).json({ message: 'category_id does not refer to an existing category' });
         }
+        const categoryName = categoryRows[0].name;
 
+        // asset_tag/name both depend on the row's own auto-increment id, which
+        // doesn't exist until after the INSERT — write placeholders (can't be
+        // NULL, both columns are NOT NULL) then immediately patch the same row
+        // before commit. No other connection ever observes the placeholder.
         const [result] = await connection.query(
         `INSERT INTO assets
-        (asset_tag, name, category_id, purchase_date, purchase_cost, status, \`condition\`, current_assignee_id)
-        VALUES (?, ?, ?, ?, ?, 'available', ?, NULL)`,
+        (asset_tag, name, brand, category_id, purchase_date, purchase_cost, status, \`condition\`, current_assignee_id)
+        VALUES ('PENDING', 'PENDING', ?, ?, ?, ?, 'available', ?, NULL)`,
 
-        [asset_tag, name, category_id || null, purchase_date || null, purchase_cost || null, condition || 'new']);
+        [brand, category_id, purchase_date || null, purchase_cost || null, condition || 'new']);
         const assetId = result.insertId;
 
-        if (category_id) 
-        {
-            await validateAndWriteSpecValues(connection, assetId, category_id, spec_values || []);
-        }
+        const assetTag = `AST-${assetId}`;
+        const name = `${brand} ${categoryName} #${assetId}`;
+
+        await connection.query(
+        'UPDATE assets SET asset_tag = ?, name = ? WHERE id = ?',
+        [assetTag, name, assetId]);
+
+        await validateAndWriteSpecValues(connection, assetId, category_id, spec_values || []);
 
         await connection.query(
         `INSERT INTO asset_history (performed_by, event_type, description, asset_id)
-        VALUES (?, 'purchase', ?, ?)`, [req.user.id, `Asset "${name}" (${asset_tag}) added to inventory`, assetId]);
+        VALUES (?, 'purchase', ?, ?)`, [req.user.id, `Asset "${name}" (${assetTag}) added to inventory`, assetId]);
 
         await connection.commit();
-        return res.status(201).json({ id: assetId, asset_tag, name });
-    } 
+        return res.status(201).json({ id: assetId, asset_tag: assetTag, name });
+    }
     
     catch (err) 
     {
@@ -506,7 +514,7 @@ export async function updateAsset(req, res)
   try 
     {
         const { id } = req.params;
-        const { name, category_id, purchase_date, purchase_cost, status, condition, spec_values, assignee_id } = req.body;
+        const { name, brand, category_id, purchase_date, purchase_cost, status, condition, spec_values, assignee_id } = req.body;
 
         const [existingRows] = await connection.query('SELECT * FROM assets WHERE id = ?', [id]);
 
@@ -607,14 +615,32 @@ export async function updateAsset(req, res)
             && finalAssigneeId !== null;
         const finalUsageState = isNewAssignment ? 'active' : existing.usage_state;
 
+        // The display name is derived (brand + category + id), so it only
+        // gets recomputed when what it's derived from actually changes —
+        // otherwise it's left exactly as it was. Recomputing needs the
+        // category's name, which means a lookup only when brand or category
+        // actually moved.
+        const finalBrand = brand ?? existing.brand;
+        let finalName = name ?? existing.name;
+        if (brand !== undefined || (category_id !== undefined && finalCategoryId !== existing.category_id))
+        {
+            const [categoryRows] = await connection.query('SELECT name FROM categories WHERE id = ?', [finalCategoryId]);
+            if (categoryRows.length === 0)
+            {
+                throw new Error('category_id does not refer to an existing category');
+            }
+            finalName = `${finalBrand} ${categoryRows[0].name} #${id}`;
+        }
+
         await connection.beginTransaction();
 
         await connection.query(
         `UPDATE assets
-        SET name = ?, category_id = ?, purchase_date = ?, purchase_cost = ?, status = ?, \`condition\` = ?, current_assignee_id = ?, usage_state = ?
+        SET name = ?, brand = ?, category_id = ?, purchase_date = ?, purchase_cost = ?, status = ?, \`condition\` = ?, current_assignee_id = ?, usage_state = ?
         WHERE id = ?`,
         [
-            name ?? existing.name,
+            finalName,
+            finalBrand,
             finalCategoryId,
             purchase_date ?? existing.purchase_date,
             purchase_cost ?? existing.purchase_cost,
@@ -1183,5 +1209,47 @@ export async function setUsageState(req, res)
     finally
     {
         connection.release();
+    }
+}
+
+// ================================================================
+// ASSET STATS (admin dashboard)
+// ================================================================
+// Counts of assets grouped by status, for the admin dashboard's KPI
+// tiles + status breakdown chart. All statuses are always present in
+// the response (defaulted to 0) so the frontend doesn't have to guess
+// at missing keys.
+export async function getAssetStats(req, res)
+{
+    try
+    {
+        const [statusRows] = await pool.query(
+            `SELECT status, COUNT(*) AS count FROM assets GROUP BY status`
+        );
+        const [conditionRows] = await pool.query(
+            `SELECT \`condition\`, COUNT(*) AS count FROM assets GROUP BY \`condition\``
+        );
+
+        const byStatus = { available: 0, assigned: 0, under_repair: 0, retired: 0, disposed: 0 };
+        let total = 0;
+        for (const row of statusRows)
+        {
+            byStatus[row.status] = row.count;
+            total += row.count;
+        }
+
+        const byCondition = { new: 0, good: 0, fair: 0, damaged: 0 };
+        for (const row of conditionRows)
+        {
+            byCondition[row.condition] = row.count;
+        }
+
+        return res.json({ total, byStatus, byCondition });
+    }
+
+    catch (error)
+    {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error fetching asset stats' });
     }
 }

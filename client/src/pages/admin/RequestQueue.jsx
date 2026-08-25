@@ -58,7 +58,7 @@ export default function RequestQueue() {
 
   return (
     <div>
-      <h1 className="mb-1 font-serif text-3xl tracking-tight text-zinc-100">Requests</h1>
+      <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">Requests</h1>
       <p className="mb-6 text-base text-zinc-500">Click a request to review, approve, reject, and fulfill it.</p>
 
       <input
@@ -100,7 +100,7 @@ export default function RequestQueue() {
                   <p className="text-base font-medium text-zinc-100">
                     {r.employee_name} <span className="font-normal text-zinc-500">— {TYPE_LABELS[r.request_type]}</span>
                     {r.category_name && <span className="font-normal text-zinc-500"> · {r.category_name}</span>}
-                    {r.asset_name && <span className="font-normal text-zinc-500"> · {r.asset_name} ({r.asset_tag})</span>}
+                    {r.asset_name && <span className="font-normal text-zinc-500"> · {r.asset_name}</span>}
                   </p>
                   <p className="mt-0.5 text-sm text-zinc-500">{r.reason}</p>
                   <p className="mt-1 text-sm text-zinc-600">Submitted {new Date(r.created_at).toLocaleDateString()}</p>

@@ -13,6 +13,7 @@ import {
   getAcknowledgementById,
   acknowledgeAssignment,
   setUsageState,
+  getAssetStats,
 } from '../controllers/assetController.js';
 
 import {uploadDocument, getDocumentsForAsset } from '../controllers/documentController.js';
@@ -153,6 +154,39 @@ router.get('/acknowledgements/:id', requireAuth, getAcknowledgementById);
 
 /**
  * @swagger
+ * /api/assets/stats:
+ *   get:
+ *     summary: Asset counts by status, for the admin dashboard (total + KPI/status-breakdown)
+ *     tags: [Assets]
+ *     responses:
+ *       200:
+ *         description: Asset counts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 total: { type: integer }
+ *                 byStatus:
+ *                   type: object
+ *                   properties:
+ *                     available: { type: integer }
+ *                     assigned: { type: integer }
+ *                     under_repair: { type: integer }
+ *                     retired: { type: integer }
+ *                     disposed: { type: integer }
+ *                 byCondition:
+ *                   type: object
+ *                   properties:
+ *                     new: { type: integer }
+ *                     good: { type: integer }
+ *                     fair: { type: integer }
+ *                     damaged: { type: integer }
+ */
+router.get('/stats', requireAuth, requireRole('administrator'), getAssetStats);
+
+/**
+ * @swagger
  * /api/assets/{id}:
  *   get:
  *     summary: Get one asset with its documents and spec values. Admins can view any asset (plus its full history log); employees can only view an asset they currently or previously had assigned to them, and only see the history entries that fall within their own assignment window(s).
@@ -177,7 +211,7 @@ router.get('/:id', requireAuth, getAssetById);
  * @swagger
  * /api/assets:
  *   post:
- *     summary: Create an asset (admin only)
+ *     summary: Create an asset (admin only). asset_tag and name are no longer admin-supplied — asset_tag is auto-generated and name is derived as "brand category #id".
  *     tags: [Assets]
  *     requestBody:
  *       required: true
@@ -185,10 +219,9 @@ router.get('/:id', requireAuth, getAssetById);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [asset_tag, name, category_id]
+ *             required: [brand, category_id]
  *             properties:
- *               asset_tag: { type: string }
- *               name: { type: string }
+ *               brand: { type: string }
  *               category_id: { type: integer }
  *               purchase_date: { type: string, format: date }
  *               purchase_cost: { type: number }
@@ -207,9 +240,8 @@ router.get('/:id', requireAuth, getAssetById);
  *                 id: { type: integer }
  *                 asset_tag: { type: string }
  *                 name: { type: string }
- *       400: { description: 'Missing required fields, invalid condition, or spec_values fail category validation', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       400: { description: 'Missing required fields, invalid category_id/condition, or spec_values fail category validation', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *       403: { description: Not an administrator, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- *       409: { description: asset_tag already exists, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
 router.post('/', requireAuth, requireRole('administrator'), createAsset);
 
@@ -217,7 +249,7 @@ router.post('/', requireAuth, requireRole('administrator'), createAsset);
  * @swagger
  * /api/assets/{id}:
  *   put:
- *     summary: Update an asset (admin only). Logs status_change/condition_change history entries when those fields change.
+ *     summary: Update an asset (admin only). Logs status_change/condition_change history entries when those fields change. Changing brand (or category_id) recomputes and re-stores the derived display name.
  *     tags: [Assets]
  *     parameters:
  *       - in: path
@@ -230,7 +262,7 @@ router.post('/', requireAuth, requireRole('administrator'), createAsset);
  *           schema:
  *             type: object
  *             properties:
- *               name: { type: string }
+ *               brand: { type: string }
  *               category_id: { type: integer }
  *               purchase_date: { type: string, format: date }
  *               purchase_cost: { type: number }

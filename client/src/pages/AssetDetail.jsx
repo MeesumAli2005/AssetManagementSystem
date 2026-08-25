@@ -34,6 +34,7 @@ export default function AssetDetail() {
 
   const [status, setStatus] = useState('');
   const [condition, setCondition] = useState('');
+  const [brand, setBrand] = useState('');
   const [savingStatus, setSavingStatus] = useState(false);
 
   const [retireOpen, setRetireOpen] = useState(false);
@@ -59,6 +60,7 @@ export default function AssetDetail() {
       setAsset(data);
       setStatus(data.status);
       setCondition(data.condition);
+      setBrand(data.brand || '');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load asset');
     } finally {
@@ -76,19 +78,9 @@ export default function AssetDetail() {
       // Status is only included while the asset isn't currently assigned —
       // while assigned, status is locked to "assigned" and can only move
       // off that via unassigning on the employee's page.
-      const payload = asset.status === 'assigned' ? { condition } : { status, condition };
+      const payload = asset.status === 'assigned' ? { condition, brand } : { status, condition, brand };
       await updateAsset(id, payload);
-
-      let message = 'Asset updated';
-      if (payload.status && payload.status !== asset.status && condition !== asset.condition) {
-        message = `Status changed to "${status.replace('_', ' ')}" and condition to "${condition}"`;
-      } else if (payload.status && payload.status !== asset.status) {
-        message = `Status changed to "${status.replace('_', ' ')}"`;
-      } else if (condition !== asset.condition) {
-        message = `Condition changed to "${condition}"`;
-      }
-
-      toast.success(message);
+      toast.success('Asset updated');
       await loadAsset();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update asset');
@@ -170,8 +162,7 @@ export default function AssetDetail() {
 
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="font-serif text-3xl tracking-tight text-zinc-100">{asset.name}</h1>
-          <p className="mt-1 text-base text-zinc-500">{asset.asset_tag}</p>
+          <h1 className="font-serif text-3xl font-bold tracking-tight text-zinc-100">{asset.name}</h1>
         </div>
         <div className="flex gap-2">
           <StatusBadge text={asset.status.replace('_', ' ')} color={STATUS_COLORS[asset.status]} />
@@ -262,7 +253,18 @@ export default function AssetDetail() {
           </div>
 
           <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm">
-            <p className="mb-3 text-base font-medium text-zinc-300">Status &amp; Condition</p>
+            <p className="mb-3 text-base font-medium text-zinc-300">Brand, Status &amp; Condition</p>
+            <div className="mb-4">
+              <label className="mb-1.5 block text-sm text-zinc-500">Brand</label>
+              <input
+                type="text"
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                disabled={asset.status === 'retired' || asset.status === 'disposed'}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <p className="mt-1.5 text-sm text-zinc-500">Changing this recomputes the asset's display name.</p>
+            </div>
             <div className="mb-4 flex gap-3">
               {asset.status === 'assigned' ? (
                 <div className="flex flex-1 items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-base text-zinc-500">

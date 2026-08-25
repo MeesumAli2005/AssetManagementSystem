@@ -69,7 +69,7 @@ export default function Acknowledgements() {
 
   return (
     <div>
-      <h1 className="mb-1 font-serif text-3xl tracking-tight text-zinc-100">Acknowledgements</h1>
+      <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">Acknowledgements</h1>
       <p className="mb-6 text-base text-zinc-500">
         Every asset receipt and return you've acknowledged, or still need to. Click one to see its full details.
       </p>
@@ -90,7 +90,7 @@ export default function Acknowledgements() {
                   >
                     <div>
                       <p className="text-base font-medium text-zinc-100">
-                        {data.name} <span className="font-normal text-zinc-500">({data.asset_tag})</span>
+                        {data.name}
                       </p>
                       <p className="text-base text-zinc-500">
                         {data.category_name || '—'} · Assigned by {data.assigned_by_name || 'an administrator'} on{' '}
@@ -125,7 +125,7 @@ export default function Acknowledgements() {
                 >
                   <div>
                     <p className="text-base font-medium text-zinc-100">
-                      {request.asset_name} <span className="font-normal text-zinc-500">({request.asset_tag})</span>
+                      {request.asset_name}
                     </p>
                     <p className="text-base text-zinc-500">Return marked complete</p>
                   </div>

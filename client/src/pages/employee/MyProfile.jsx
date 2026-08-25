@@ -90,7 +90,7 @@ export default function MyProfile() {
 
   return (
     <div className="max-w-md">
-      <h1 className="mb-6 font-serif text-3xl tracking-tight text-zinc-100">My Profile</h1>
+      <h1 className="mb-6 font-serif text-3xl font-bold tracking-tight text-zinc-100">My Profile</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm">
         <div>

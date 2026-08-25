@@ -3,14 +3,8 @@ import jwt from 'jsonwebtoken';
 import pool from '../config/db.js';
  
 const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRES_IN = '1d';
- 
-// ---------------------------------------------------------------------
-// SIGNUP (self-signup only)
-// Real admin accounts are only ever
-// created via createEmployeeAccount() in adminController.js, which is
-// locked behind requireAuth + requireRole('administrator').
-// ---------------------------------------------------------------------
+const JWT_EXPIRES_IN = '30m';
+
 // export async function signup(req, res) {
 //   try {
 //     const { full_name, email, password } = req.body;

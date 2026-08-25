@@ -53,7 +53,7 @@ export default function MyAssets() {
 
   return (
     <div>
-      <h1 className="mb-1 font-serif text-3xl tracking-tight text-zinc-100">My Assets</h1>
+      <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">My Assets</h1>
       <p className="mb-6 text-base text-zinc-500">Everything currently assigned to you.</p>
 
       <div className="mb-6 grid grid-cols-3 gap-4">
@@ -84,7 +84,7 @@ export default function MyAssets() {
               >
                 <div>
                   <p className="text-base font-medium text-zinc-100">
-                    {asset.name} <span className="font-normal text-zinc-500">({asset.asset_tag})</span>
+                    {asset.name}
                   </p>
                   <p className="text-sm text-zinc-500">{asset.category_name || '—'}</p>
                   {!asset.acknowledged_at && (
