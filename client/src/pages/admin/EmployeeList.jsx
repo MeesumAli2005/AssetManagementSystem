@@ -35,7 +35,7 @@ export default function EmployeeList() {
   }, [search, departmentId]);
 
   return (
-    <div>
+    <div className="mx-auto max-w-6xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="font-serif text-3xl font-bold tracking-tight text-zinc-100">Employees</h1>

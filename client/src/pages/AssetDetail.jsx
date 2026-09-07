@@ -155,7 +155,7 @@ export default function AssetDetail() {
   if (!asset) return <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">{error || 'Asset not found'}</p>;
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto max-w-2xl">
       <Link to="/assets" className="mb-4 inline-block text-base text-zinc-500 hover:text-emerald-400">
         ← Back to assets
       </Link>
@@ -362,7 +362,7 @@ export default function AssetDetail() {
       {/* History — admins see everything; employees see only what happened
           during their own assignment window(s), scoped server-side */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm">
-        <p className="mb-1 text-base font-medium text-zinc-300">History</p>
+        <p className="mb-1 text-2xl font-bold text-zinc-300">History</p>
         {!isAdmin && <p className="mb-3 text-sm text-zinc-500">While this asset was assigned to you.</p>}
         {asset.history.length === 0 ? (
           <p className="text-base text-zinc-500">No history yet.</p>
@@ -404,7 +404,7 @@ export default function AssetDetail() {
       <Modal open={disposeOpen} onClose={() => setDisposeOpen(false)} title="Dispose of asset">
         <form onSubmit={handleDispose} className="space-y-4">
           <p className="text-base text-zinc-400">
-            This is a further, terminal step beyond retirement — the asset is physically gone for good. Its history is preserved.
+            THIS ACTION CANNOT BE REVERSED (This is a step beyond retirement, Its history is preserved)
           </p>
           <div>
             <label className="mb-1.5 block text-base font-medium text-zinc-300">Reason</label>

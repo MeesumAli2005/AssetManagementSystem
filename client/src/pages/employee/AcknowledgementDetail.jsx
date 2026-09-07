@@ -64,7 +64,7 @@ export default function AcknowledgementDetail() {
   const needsAck = item.is_active && !item.acknowledged_at;
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto max-w-2xl">
       <Link to="/employee/acknowledgements" className="mb-4 inline-block text-base font-medium text-zinc-500 hover:text-zinc-300">
         ← Back to acknowledgements
       </Link>

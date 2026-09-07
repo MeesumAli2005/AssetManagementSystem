@@ -152,7 +152,7 @@ export async function createAsset(req, res)
 
         await connection.query(
         `INSERT INTO asset_history (performed_by, event_type, description, asset_id)
-        VALUES (?, 'purchase', ?, ?)`, [req.user.id, `Asset "${name}" (${assetTag}) added to inventory`, assetId]);
+        VALUES (?, 'purchase', ?, ?)`, [req.user.id, `Asset "${name}" added to inventory`, assetId]);
 
         await connection.commit();
         return res.status(201).json({ id: assetId, asset_tag: assetTag, name });

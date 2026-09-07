@@ -39,7 +39,7 @@ export default function MyRequests() {
   }, []);
 
   return (
-    <div>
+    <div className="mx-auto max-w-2xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">My Requests</h1>

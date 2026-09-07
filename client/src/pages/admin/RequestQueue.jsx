@@ -19,45 +19,55 @@ const TYPE_LABELS = {
 
 const STATUS_FILTERS = ['pending', 'approved', 'sent_for_repair', 'rejected', 'completed', 'all'];
 
-// A short hint for the admin about what a card in "approved" / "sent_for_repair" is actually waiting on.
 function waitingCaption(r) {
   if (r.status === 'approved' && r.request_type === 'asset') return 'Awaiting asset assignment';
-  if (r.status === 'approved' && r.request_type === 'return') return 'Awaiting return — mark completed once received';
-  if (r.status === 'sent_for_repair') return 'Under repair — awaiting completion';
+  if (r.status === 'approved' && r.request_type === 'return') return 'Awaiting return. Please mark completed once received';
+  if (r.status === 'sent_for_repair') return 'Under repair, awaiting completion';
   if (r.status === 'completed' && r.request_type === 'return' && !r.acknowledged_at) return 'Awaiting employee acknowledgement';
   return null;
 }
 
-export default function RequestQueue() {
+export default function RequestQueue() 
+{
   const [requests, setRequests] = useState([]);
   const [statusFilter, setStatusFilter] = useState('pending');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  async function load() {
+  async function load() 
+  {
     setLoading(true);
     setError('');
-    try {
+    
+    try 
+    {
       setRequests(await getAllRequests({
         status: statusFilter === 'all' ? undefined : statusFilter,
         search: search.trim() || undefined,
       }));
-    } catch (err) {
+
+    } 
+    
+    catch (err) 
+    {
       setError(err.response?.data?.message || 'Failed to load requests');
-    } finally {
+    } 
+    
+    finally 
+    {
       setLoading(false);
     }
+
   }
 
   useEffect(() => {
     const timeout = setTimeout(load, search ? 300 : 0);
     return () => clearTimeout(timeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, search]);
 
   return (
-    <div>
+    <div className="mx-auto max-w-2xl">
       <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">Requests</h1>
       <p className="mb-6 text-base text-zinc-500">Click a request to review, approve, reject, and fulfill it.</p>
 

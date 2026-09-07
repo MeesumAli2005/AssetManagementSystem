@@ -52,7 +52,7 @@ export default function MyAssets() {
   }
 
   return (
-    <div>
+    <div className="mx-auto max-w-2xl">
       <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">My Assets</h1>
       <p className="mb-6 text-base text-zinc-500">Everything currently assigned to you.</p>
 

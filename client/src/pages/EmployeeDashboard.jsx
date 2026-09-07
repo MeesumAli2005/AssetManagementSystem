@@ -25,7 +25,7 @@ export default function EmployeeDashboard() {
   }
 
   return (
-    <div>
+    <div className="mx-auto max-w-2xl">
       <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">
         Welcome, {user.full_name || user.email}
       </h1>

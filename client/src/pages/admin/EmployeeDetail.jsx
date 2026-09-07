@@ -178,7 +178,7 @@ export default function EmployeeDetail() {
   if (!employee) return <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">{error || 'Employee not found'}</p>;
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto max-w-2xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="font-serif text-3xl font-bold tracking-tight text-zinc-100">{employee.full_name}</h1>

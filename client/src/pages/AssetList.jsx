@@ -91,7 +91,7 @@ export default function AssetList()
     }, [search, categoryId, status, departmentId, assigneeId, assignedFilter, page]);
 
     return (
-        <div>
+        <div className="mx-auto max-w-2xl">
             <div className="mb-6 flex items-center justify-between">
                 <div>
                     <h1 className="font-serif text-3xl font-bold tracking-tight text-zinc-100">Assets</h1>

@@ -68,7 +68,7 @@ export default function CreateAsset() {
   }
 
   return (
-    <div className="max-w-md">
+    <div className="mx-auto max-w-md">
       <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">New Asset</h1>
       <p className="mb-6 text-base text-zinc-500">Add an item to inventory.</p>
 

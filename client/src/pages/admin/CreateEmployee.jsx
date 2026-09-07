@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createEmployee } from '../../api/employees';
+import PasswordInput from '../../components/PasswordInput';
 
 export default function CreateEmployee() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export default function CreateEmployee() {
   }
 
   return (
-    <div className="max-w-md">
+    <div className="mx-auto max-w-md">
       <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">New Employee</h1>
       <p className="mb-6 text-base text-zinc-500">Create an account and share the temporary password.</p>
 
@@ -60,14 +61,12 @@ export default function CreateEmployee() {
 
         <div>
           <label className="mb-1.5 block text-base font-medium text-zinc-300">Temporary password</label>
-          <input
-            type="text"
+          <PasswordInput
             value={temporaryPassword}
             onChange={(event) => setTemporaryPassword(event.target.value)}
             required
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
           />
-          <p className="mt-1.5 text-sm text-zinc-500">Share this with the employee securely — it won't be shown again.</p>
+          <p className="mt-1.5 text-sm text-zinc-500">Share this with the employee securely (It will not be shown again).</p>
         </div>
 
         <div>

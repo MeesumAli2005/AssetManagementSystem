@@ -5,6 +5,7 @@ import { getMyProfile, updateMyProfile } from '../../api/employees';
 import { changePassword } from '../../api/auth';
 import StatusBadge from '../../components/StatusBadge';
 import Modal from '../../components/Modal';
+import PasswordInput from '../../components/PasswordInput';
 
 export default function MyProfile() {
   const [profile, setProfile] = useState(null);
@@ -89,7 +90,7 @@ export default function MyProfile() {
   if (!profile) return <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">{error || 'Profile not found'}</p>;
 
   return (
-    <div className="max-w-md">
+    <div className="mx-auto max-w-md">
       <h1 className="mb-6 font-serif text-3xl font-bold tracking-tight text-zinc-100">My Profile</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm">
@@ -160,36 +161,30 @@ export default function MyProfile() {
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
             <label className="mb-1.5 block text-base font-medium text-zinc-300">Current password</label>
-            <input
-              type="password"
+            <PasswordInput
               value={currentPassword}
               onChange={(event) => setCurrentPassword(event.target.value)}
               required
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
             />
           </div>
 
           <div>
             <label className="mb-1.5 block text-base font-medium text-zinc-300">New password</label>
-            <input
-              type="password"
+            <PasswordInput
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
               required
               minLength={6}
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
             />
           </div>
 
           <div>
             <label className="mb-1.5 block text-base font-medium text-zinc-300">Confirm new password</label>
-            <input
-              type="password"
+            <PasswordInput
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               required
               minLength={6}
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
             />
           </div>
 

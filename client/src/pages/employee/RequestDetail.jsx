@@ -103,7 +103,7 @@ export default function RequestDetail() {
   const needsReturnAck = request.request_type === 'return' && request.status === 'completed' && !request.acknowledged_at;
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto max-w-2xl">
       <Link to="/employee/requests" className="mb-4 inline-block text-base font-medium text-zinc-500 hover:text-zinc-300">
         ← Back to my requests
       </Link>

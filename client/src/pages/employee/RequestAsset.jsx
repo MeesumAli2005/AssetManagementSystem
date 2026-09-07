@@ -41,8 +41,8 @@ export default function RequestAsset() {
       let message = 'Request submitted';
       if (requestType === 'asset' && typeof result.available_count === 'number') {
         message = result.available_count > 0
-          ? `Request submitted — ${result.available_count} available in this category right now`
-          : 'Request submitted — none currently available in this category';
+          ? `Request submitted`
+          : 'Request submitted';
       }
       toast.success(message);
 
@@ -55,7 +55,7 @@ export default function RequestAsset() {
   }
 
   return (
-    <div>
+    <div className="mx-auto max-w-2xl">
       <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">Request Asset</h1>
       <p className="mb-6 text-base text-zinc-500">Request a new asset, or a return/repair for one already assigned to you.</p>
 

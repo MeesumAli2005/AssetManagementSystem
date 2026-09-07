@@ -203,9 +203,7 @@ export default function Layout()
         </header>
 
         <main className="flex-1 overflow-y-auto px-8 py-10">
-          <div className="mx-auto max-w-2xl">
-            <Outlet />
-          </div>
+          <Outlet />
         </main>
       </div>
     </div>

@@ -68,7 +68,7 @@ export default function Acknowledgements() {
   ].sort((a, b) => b.date - a.date);
 
   return (
-    <div>
+    <div className="mx-auto max-w-2xl">
       <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">Acknowledgements</h1>
       <p className="mb-6 text-base text-zinc-500">
         Every asset receipt and return you've acknowledged, or still need to. Click one to see its full details.

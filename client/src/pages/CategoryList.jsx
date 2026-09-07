@@ -107,7 +107,7 @@ export default function CategoryList() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto max-w-2xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="font-serif text-3xl font-bold tracking-tight text-zinc-100">Categories</h1>

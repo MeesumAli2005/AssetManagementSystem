@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+
+
 import {
   getRequestById,
   reviewRequest,
@@ -9,8 +11,12 @@ import {
   completeRepair,
   addRequestNote,
 } from '../../api/requests';
+
+
 import { getAllAssets } from '../../api/assets';
+
 import StatusBadge from '../../components/StatusBadge';
+
 import Modal from '../../components/Modal';
 
 const STATUS_COLORS = {
@@ -59,7 +65,8 @@ function buildTimeline(r) {
   return steps;
 }
 
-function waitingCaption(r) {
+function waitingCaption(r) 
+{
   if (r.status === 'approved' && r.request_type === 'asset') return 'Awaiting asset assignment';
   if (r.status === 'approved' && r.request_type === 'return') return 'Awaiting return — mark completed once received';
   if (r.status === 'sent_for_repair') return 'Under repair — awaiting completion';
@@ -67,7 +74,8 @@ function waitingCaption(r) {
   return null;
 }
 
-function Field({ label, children }) {
+function Field({ label, children }) 
+{
   return (
     <div>
       <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">{label}</p>
@@ -76,7 +84,8 @@ function Field({ label, children }) {
   );
 }
 
-export default function RequestDetail() {
+export default function RequestDetail() 
+{
   const { id } = useParams();
 
   const [request, setRequest] = useState(null);
@@ -102,45 +111,62 @@ export default function RequestDetail() {
   const [noteText, setNoteText] = useState('');
   const [addingNote, setAddingNote] = useState(false);
 
-  async function load() {
+  async function load() 
+  {
     setLoading(true);
     setError('');
-    try {
+    
+    try 
+    {
       setRequest(await getRequestById(id));
-    } catch (err) {
+    } 
+    
+    catch (err) 
+    {
       setError(err.response?.data?.message || 'Failed to load request');
-    } finally {
+    }
+    finally
+    {
       setLoading(false);
     }
   }
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  function openReview(action) {
+  function openReview(action) 
+  {
     setReviewAction(action);
     setReviewNotes('');
     setRepairDetails('');
     setReviewOpen(true);
   }
 
-  async function handleSubmitReview(e) {
+  async function handleSubmitReview(e) 
+  {
     e.preventDefault();
     setActing(true);
     try {
       const extra = { review_notes: reviewNotes || undefined };
-      if (reviewAction === 'approved' && request.request_type === 'repair') {
+      if (reviewAction === 'approved' && request.request_type === 'repair') 
+      {
         extra.repair_details = repairDetails || undefined;
       }
+
       const result = await reviewRequest(request.id, reviewAction, extra);
       toast.success(result.message);
       setReviewOpen(false);
       await load();
-    } catch (err) {
+    } 
+    
+    catch (err) 
+    {
       toast.error(err.response?.data?.message || `Failed to ${reviewAction === 'approved' ? 'approve' : 'reject'} request`);
-    } finally {
+    } 
+    finally 
+    {
       setActing(false);
     }
   }
@@ -222,7 +248,7 @@ export default function RequestDetail() {
   if (!request) return <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">{error || 'Request not found'}</p>;
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto max-w-2xl">
       <Link to="/admin/requests" className="mb-4 inline-block text-sm font-medium text-zinc-500 hover:text-zinc-300">
         ← Back to requests
       </Link>
@@ -374,7 +400,7 @@ export default function RequestDetail() {
                 <p className="text-base text-zinc-200">{n.note}</p>
                 <p className="mt-1 text-sm text-zinc-500">
                   {n.admin_name} on {new Date(n.created_at).toLocaleString()} — request was{' "'}
-                  <span className="capitalize">{n.status_at_time.replaceAll('_', ' ')}</span> " at the time
+                  <span className="capitalize">{n.status_at_time.replaceAll('_', ' ')}</span>" at the time
                 </p>
               </li>
             ))}
