@@ -1,22 +1,23 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { createEmployee } from '../../api/employees';
-import PasswordInput from '../../components/PasswordInput';
+// form for admins to add a new employee/admin account with a temp password
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { createEmployee } from "../../api/employees";
+import PasswordInput from "../../components/PasswordInput";
 
 export default function CreateEmployee() {
   const navigate = useNavigate();
 
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [temporaryPassword, setTemporaryPassword] = useState('');
-  const [role, setRole] = useState('employee');
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [role, setRole] = useState("employee");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   async function handleSubmit(event) {
     event.preventDefault();
     setSaving(true);
-    setError('');
+    setError("");
     try {
       const created = await createEmployee({
         full_name: fullName,
@@ -26,7 +27,7 @@ export default function CreateEmployee() {
       });
       navigate(`/admin/employees/${created.id}`);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create employee');
+      setError(err.response?.data?.message || "Failed to create employee");
     } finally {
       setSaving(false);
     }
@@ -34,12 +35,21 @@ export default function CreateEmployee() {
 
   return (
     <div className="mx-auto max-w-md">
-      <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">New Employee</h1>
-      <p className="mb-6 text-base text-zinc-500">Create an account and share the temporary password.</p>
+      <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">
+        New Employee
+      </h1>
+      <p className="mb-6 text-base text-zinc-500">
+        Create an account and share the temporary password.
+      </p>
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm"
+      >
         <div>
-          <label className="mb-1.5 block text-base font-medium text-zinc-300">Full name</label>
+          <label className="mb-1.5 block text-base font-medium text-zinc-300">
+            Full name
+          </label>
           <input
             type="text"
             value={fullName}
@@ -49,7 +59,9 @@ export default function CreateEmployee() {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-base font-medium text-zinc-300">Email</label>
+          <label className="mb-1.5 block text-base font-medium text-zinc-300">
+            Email
+          </label>
           <input
             type="email"
             value={email}
@@ -60,17 +72,23 @@ export default function CreateEmployee() {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-base font-medium text-zinc-300">Temporary password</label>
+          <label className="mb-1.5 block text-base font-medium text-zinc-300">
+            Temporary password
+          </label>
           <PasswordInput
             value={temporaryPassword}
             onChange={(event) => setTemporaryPassword(event.target.value)}
             required
           />
-          <p className="mt-1.5 text-sm text-zinc-500">Share this with the employee securely (It will not be shown again).</p>
+          <p className="mt-1.5 text-sm text-zinc-500">
+            Share this with the employee securely (It will not be shown again).
+          </p>
         </div>
 
         <div>
-          <label className="mb-1.5 block text-base font-medium text-zinc-300">Role</label>
+          <label className="mb-1.5 block text-base font-medium text-zinc-300">
+            Role
+          </label>
           <select
             value={role}
             onChange={(event) => setRole(event.target.value)}
@@ -81,14 +99,18 @@ export default function CreateEmployee() {
           </select>
         </div>
 
-        {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">{error}</p>}
+        {error && (
+          <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">
+            {error}
+          </p>
+        )}
 
         <button
           type="submit"
           disabled={saving}
           className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {saving ? 'Creating…' : 'Create Employee'}
+          {saving ? "Creating…" : "Create Employee"}
         </button>
       </form>
     </div>

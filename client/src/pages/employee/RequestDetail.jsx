@@ -1,50 +1,60 @@
-import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { getRequestById, acknowledgeReturn } from '../../api/requests';
-import StatusBadge from '../../components/StatusBadge';
+// employee view of one of their own requests, read-only except the return ack button
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import toast from "react-hot-toast";
+import { getRequestById, acknowledgeReturn } from "../../api/requests";
+import StatusBadge from "../../components/StatusBadge";
 
 const STATUS_COLORS = {
-  pending: 'amber',
-  approved: 'green',
-  sent_for_repair: 'amber',
-  rejected: 'red',
-  completed: 'slate',
+  pending: "amber",
+  approved: "green",
+  sent_for_repair: "amber",
+  rejected: "red",
+  completed: "slate",
 };
 
 const TYPE_LABELS = {
-  asset: 'New asset',
-  return: 'Return',
-  repair: 'Repair',
+  asset: "New asset",
+  return: "Return",
+  repair: "Repair",
 };
 
 const COMPLETION_LABELS = {
-  asset: 'Asset assigned',
-  return: 'Return completed',
-  repair: 'Repair completed',
+  asset: "Asset assigned",
+  return: "Return completed",
+  repair: "Repair completed",
 };
 
 // Derives the request's lifecycle timeline from the timestamp/actor fields
 // already on the row — no separate audit table, just presenting what's
 // there in order.
 function buildTimeline(r) {
-  const steps = [{ label: 'Submitted', at: r.created_at }];
+  const steps = [{ label: "Submitted", at: r.created_at }];
 
   if (r.reviewed_at) {
-    const label = r.status === 'rejected'
-      ? 'Rejected'
-      : r.request_type === 'repair'
-        ? 'Approved — sent for repair'
-        : 'Approved';
-    steps.push({ label, at: r.reviewed_at, by: r.reviewed_by_name || 'an administrator' });
+    const label =
+      r.status === "rejected"
+        ? "Rejected"
+        : r.request_type === "repair"
+          ? "Approved — sent for repair"
+          : "Approved";
+    steps.push({
+      label,
+      at: r.reviewed_at,
+      by: r.reviewed_by_name || "an administrator",
+    });
   }
 
   if (r.completed_at) {
-    steps.push({ label: COMPLETION_LABELS[r.request_type], at: r.completed_at, by: r.completed_by_name });
+    steps.push({
+      label: COMPLETION_LABELS[r.request_type],
+      at: r.completed_at,
+      by: r.completed_by_name,
+    });
   }
 
-  if (r.request_type === 'return' && r.acknowledged_at) {
-    steps.push({ label: 'Acknowledged by you', at: r.acknowledged_at });
+  if (r.request_type === "return" && r.acknowledged_at) {
+    steps.push({ label: "Acknowledged by you", at: r.acknowledged_at });
   }
 
   return steps;
@@ -53,7 +63,9 @@ function buildTimeline(r) {
 function Field({ label, children }) {
   return (
     <div>
-      <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">{label}</p>
+      <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+        {label}
+      </p>
       <p className="mt-0.5 text-base text-zinc-200">{children}</p>
     </div>
   );
@@ -64,16 +76,16 @@ export default function RequestDetail() {
 
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [acking, setAcking] = useState(false);
 
   async function load() {
     setLoading(true);
-    setError('');
+    setError("");
     try {
       setRequest(await getRequestById(id));
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load request');
+      setError(err.response?.data?.message || "Failed to load request");
     } finally {
       setLoading(false);
     }
@@ -88,23 +100,36 @@ export default function RequestDetail() {
     setAcking(true);
     try {
       await acknowledgeReturn(request.id);
-      toast.success('Return acknowledged');
+      toast.success("Return acknowledged");
       await load();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to acknowledge return');
+      toast.error(
+        err.response?.data?.message || "Failed to acknowledge return",
+      );
     } finally {
       setAcking(false);
     }
   }
 
   if (loading) return <p className="text-base text-zinc-500">Loading…</p>;
-  if (!request) return <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">{error || 'Request not found'}</p>;
+  if (!request)
+    return (
+      <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">
+        {error || "Request not found"}
+      </p>
+    );
 
-  const needsReturnAck = request.request_type === 'return' && request.status === 'completed' && !request.acknowledged_at;
+  const needsReturnAck =
+    request.request_type === "return" &&
+    request.status === "completed" &&
+    !request.acknowledged_at;
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Link to="/employee/requests" className="mb-4 inline-block text-base font-medium text-zinc-500 hover:text-zinc-300">
+      <Link
+        to="/employee/requests"
+        className="mb-4 inline-block text-base font-medium text-zinc-500 hover:text-zinc-300"
+      >
         ← Back to my requests
       </Link>
 
@@ -114,15 +139,24 @@ export default function RequestDetail() {
             {TYPE_LABELS[request.request_type]} request
           </h1>
         </div>
-        <StatusBadge text={request.status.replaceAll('_', ' ')} color={STATUS_COLORS[request.status]} />
+        <StatusBadge
+          text={request.status.replaceAll("_", " ")}
+          color={STATUS_COLORS[request.status]}
+        />
       </div>
 
-      {error && <p className="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">{error}</p>}
+      {error && (
+        <p className="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">
+          {error}
+        </p>
+      )}
 
       <div className="space-y-5 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm">
         <Field label="Reason">{request.reason}</Field>
 
-        {request.category_name && <Field label="Category">{request.category_name}</Field>}
+        {request.category_name && (
+          <Field label="Category">{request.category_name}</Field>
+        )}
 
         {request.asset_name && (
           <Field label="Asset">{request.asset_name}</Field>
@@ -132,10 +166,18 @@ export default function RequestDetail() {
           <Field label="Fulfilled with">{request.resulting_asset_name}</Field>
         )}
 
-        {request.review_notes && <Field label="Note from administrator">{request.review_notes}</Field>}
+        {request.review_notes && (
+          <Field label="Note from administrator">{request.review_notes}</Field>
+        )}
 
         {request.completion_notes && (
-          <Field label={request.request_type === 'repair' ? 'Repair completion notes' : 'Completion notes'}>
+          <Field
+            label={
+              request.request_type === "repair"
+                ? "Repair completion notes"
+                : "Completion notes"
+            }
+          >
             {request.completion_notes}
           </Field>
         )}
@@ -148,7 +190,8 @@ export default function RequestDetail() {
             <li key={i} className="text-base">
               <p className="text-zinc-200">{step.label}</p>
               <p className="text-sm text-zinc-500">
-                {new Date(step.at).toLocaleString()}{step.by && ` · ${step.by}`}
+                {new Date(step.at).toLocaleString()}
+                {step.by && ` · ${step.by}`}
               </p>
             </li>
           ))}
@@ -161,7 +204,7 @@ export default function RequestDetail() {
           disabled={acking}
           className="mt-6 rounded-lg bg-emerald-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {acking ? 'Acknowledging…' : "Acknowledge"}
+          {acking ? "Acknowledging…" : "Acknowledge"}
         </button>
       )}
     </div>

@@ -8,13 +8,13 @@
 //      "return" or "repair" request completed.
 //
 // Safe to re-run: only alters what isn't already in place.
-import pool from '../config/db.js';
+import pool from "../config/db.js";
 
 async function addColumnIfMissing(column, definition) {
   const [rows] = await pool.query(
     `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'requests' AND COLUMN_NAME = ?`,
-    [column]
+    [column],
   );
 
   if (rows.length === 0) {
@@ -26,8 +26,11 @@ async function addColumnIfMissing(column, definition) {
 }
 
 async function run() {
-  await addColumnIfMissing('repair_details', 'TEXT NULL AFTER reason');
-  await addColumnIfMissing('completion_notes', 'TEXT NULL AFTER repair_details');
+  await addColumnIfMissing("repair_details", "TEXT NULL AFTER reason");
+  await addColumnIfMissing(
+    "completion_notes",
+    "TEXT NULL AFTER repair_details",
+  );
 
   process.exit(0);
 }

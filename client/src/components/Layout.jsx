@@ -1,25 +1,25 @@
-import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { getPendingAcknowledgements } from '../api/assets';
-import { getMyRequests, getAllRequests } from '../api/requests';
+// the sidebar + topbar shell every logged in page sits inside, also polls badge counts
+import { useEffect, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { getPendingAcknowledgements } from "../api/assets";
+import { getMyRequests, getAllRequests } from "../api/requests";
 
 const ICONS = {
-
   categories: (
-  <path
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3ZM6 6h.008v.008H6V6Z"
-  />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3ZM6 6h.008v.008H6V6Z"
+    />
   ),
 
   assets: (
-  <path
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    d="M21 7.5 12 2.25 3 7.5m18 0-9 5.25M21 7.5v9L12 21.75M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
-  />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M21 7.5 12 2.25 3 7.5m18 0-9 5.25M21 7.5v9L12 21.75M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
+    />
   ),
 
   dashboard: (
@@ -64,48 +64,57 @@ const ICONS = {
       d="M9 12h6m-6 4h6m-7 5h8a2 2 0 0 0 2-2V7.5L14.5 3H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2Zm6-16.5V8h4.5"
     />
   ),
-  
 };
 
 function Icon({ name }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="h-5 w-5">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      className="h-5 w-5"
+    >
       {ICONS[name]}
     </svg>
   );
 }
 
 const ADMIN_LINKS = [
-  { to: '/admin', label: 'Dashboard', end: true, icon: 'dashboard' },
-  { to: '/assets', label: 'Assets', icon: 'assets' },
-  { to: '/categories', label: 'Categories', icon: 'categories' },
+  { to: "/admin", label: "Dashboard", end: true, icon: "dashboard" },
+  { to: "/assets", label: "Assets", icon: "assets" },
+  { to: "/categories", label: "Categories", icon: "categories" },
 
-  { to: '/admin/employees', label: 'Employees', icon: 'employees' },
-  { to: '/admin/departments', label: 'Departments', icon: 'departments' },
-  { to: '/admin/requests', label: 'Requests', icon: 'requests', badge: 'reqs' },
+  { to: "/admin/employees", label: "Employees", icon: "employees" },
+  { to: "/admin/departments", label: "Departments", icon: "departments" },
+  { to: "/admin/requests", label: "Requests", icon: "requests", badge: "reqs" },
 ];
 
 const EMPLOYEE_LINKS = [
-  { to: '/employee', label: 'Dashboard', end: true, icon: 'dashboard' },
-  { to: '/employee/profile', label: 'My Profile', icon: 'profile' },
-  { to: '/employee/my-assets', label: 'My Assets', icon: 'assets' },
-  { to: '/employee/requests', label: 'Requests', icon: 'requests' },
-  { to: '/employee/acknowledgements', label: 'Acknowledgements', icon: 'checkBadge', badge: 'acks' },
-  { to: '/categories', label: 'Categories', icon: 'categories' },
+  { to: "/employee", label: "Dashboard", end: true, icon: "dashboard" },
+  { to: "/employee/profile", label: "My Profile", icon: "profile" },
+  { to: "/employee/my-assets", label: "My Assets", icon: "assets" },
+  { to: "/employee/requests", label: "Requests", icon: "requests" },
+  {
+    to: "/employee/acknowledgements",
+    label: "Acknowledgements",
+    icon: "checkBadge",
+    badge: "acks",
+  },
+  { to: "/categories", label: "Categories", icon: "categories" },
 ];
 
 function initials(name, email) {
-  const source = (name || email || '?').trim();
-  const parts = source.split(' ').filter(Boolean);
+  const source = (name || email || "?").trim();
+  const parts = source.split(" ").filter(Boolean);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return source.slice(0, 2).toUpperCase();
 }
 
-export default function Layout()
-{
+export default function Layout() {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const links = user.role === 'administrator' ? ADMIN_LINKS : EMPLOYEE_LINKS;
+  const links = user.role === "administrator" ? ADMIN_LINKS : EMPLOYEE_LINKS;
   const [counts, setCounts] = useState({});
 
   // Re-fetched on every navigation within the app shell (Layout itself never
@@ -115,34 +124,33 @@ export default function Layout()
   useEffect(() => {
     let cancelled = false;
 
-    async function loadCounts() 
-    {
-      try 
-      {
-        if (user.role === 'administrator') 
-          {
-            const pending = await getAllRequests({ status: 'pending' });
-            if (!cancelled) setCounts({ reqs: pending.length });
-          } 
-          
-          else 
-          {
-            const [pendingAcks, myRequests] = await Promise.all([getPendingAcknowledgements(), getMyRequests(),]);
-            const pendingReturnAcks = myRequests.filter(
-            (r) => r.request_type === 'return' && r.status === 'completed' && !r.acknowledged_at).length;
+    async function loadCounts() {
+      try {
+        if (user.role === "administrator") {
+          const pending = await getAllRequests({ status: "pending" });
+          if (!cancelled) setCounts({ reqs: pending.length });
+        } else {
+          const [pendingAcks, myRequests] = await Promise.all([
+            getPendingAcknowledgements(),
+            getMyRequests(),
+          ]);
+          const pendingReturnAcks = myRequests.filter(
+            (r) =>
+              r.request_type === "return" &&
+              r.status === "completed" &&
+              !r.acknowledged_at,
+          ).length;
 
-            if (!cancelled) setCounts({ acks: pendingAcks.length + pendingReturnAcks });
-          }
-      } 
-      
-      catch 
-      {
-
-      }
+          if (!cancelled)
+            setCounts({ acks: pendingAcks.length + pendingReturnAcks });
+        }
+      } catch {}
     }
 
     loadCounts();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user.role, location.pathname]);
 
   return (
@@ -165,8 +173,8 @@ export default function Layout()
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-lg border-l-2 px-3 py-2 text-base font-medium transition-colors ${
                     isActive
-                      ? 'border-emerald-400 bg-emerald-500/10 text-emerald-300'
-                      : 'border-transparent text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100'
+                      ? "border-emerald-400 bg-emerald-500/10 text-emerald-300"
+                      : "border-transparent text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100"
                   }`
                 }
               >
@@ -183,7 +191,8 @@ export default function Layout()
         </nav>
         <button
           onClick={logout}
-          className="rounded-lg border border-zinc-700 bg-zinc-800 px-3.5 py-1.5 text-base font-medium text-zinc-200 transition hover:bg-zinc-700">
+          className="rounded-lg border border-zinc-700 bg-zinc-800 px-3.5 py-1.5 text-base font-medium text-zinc-200 transition hover:bg-zinc-700"
+        >
           Logout
         </button>
       </aside>
@@ -195,11 +204,12 @@ export default function Layout()
               {initials(user.full_name, user.email)}
             </div>
             <div>
-              <p className="text-base font-medium text-zinc-100">{user.full_name || user.email}</p>
+              <p className="text-base font-medium text-zinc-100">
+                {user.full_name || user.email}
+              </p>
               <p className="text-sm capitalize text-zinc-500">{user.role}</p>
             </div>
           </div>
-
         </header>
 
         <main className="flex-1 overflow-y-auto px-8 py-10">

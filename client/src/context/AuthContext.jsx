@@ -1,51 +1,49 @@
-import { createContext, useContext, useState } from 'react';
-import api from '../api/axios';
+// holds the logged in user + login/logout/change password, backed by localStorage
+import { createContext, useContext, useState } from "react";
+import api from "../api/axios";
 
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children })
-{
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem('user');
+    const stored = localStorage.getItem("user");
     return stored ? JSON.parse(stored) : null;
   });
 
   async function login(email, password) {
-    const response = await api.post('/auth/login', { email, password });
+    const response = await api.post("/auth/login", { email, password });
     const { token, user } = response.data;
 
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
     setUser(user);
 
-    return user; 
+    return user;
   }
 
   // we are removing this api cuz signup is not needed
 
-  // async function signup(full_name, email, password) 
+  // async function signup(full_name, email, password)
   // {
   //   await api.post('/auth/signup', { full_name, email, password });
   // }
 
-  async function logout() 
-  {
-    try 
-    {
-      await api.post('/auth/logout');
-    } 
-    
-    catch{}
+  async function logout() {
+    try {
+      await api.post("/auth/logout");
+    } catch {}
 
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setUser(null);
   }
 
-  async function changePassword(current_password, new_password, confirm_password) 
-  {
-    await api.post('/auth/change-password', 
-    {
+  async function changePassword(
+    current_password,
+    new_password,
+    confirm_password,
+  ) {
+    await api.post("/auth/change-password", {
       current_password,
       new_password,
       confirm_password,
@@ -59,7 +57,6 @@ export function AuthProvider({ children })
   );
 }
 
-export function useAuth() 
-{
+export function useAuth() {
   return useContext(AuthContext);
 }

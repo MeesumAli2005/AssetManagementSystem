@@ -3,7 +3,7 @@ services:
     build: ./client
     ports:
       - "5173:4173"
-    
+
     depends_on:
       - server
 
@@ -23,7 +23,6 @@ services:
     depends_on:
       - mysql
 
-
   mysql:
     image: mysql:lts
     environment:
@@ -35,7 +34,7 @@ services:
       - ./database/asset_management.sql:/docker-entrypoint-initdb.d/asset_management.sql:ro
 
     ports:
-      - "3307:3306" 
-    
+      - "3307:3306"
+
 volumes:
   mysql-data:

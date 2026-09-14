@@ -1,16 +1,17 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { getAllEmployees } from '../../api/employees';
-import { getAllDepartments } from '../../api/departments';
-import StatusBadge from '../../components/StatusBadge';
+// searchable/filterable employee table for admins
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { getAllEmployees } from "../../api/employees";
+import { getAllDepartments } from "../../api/departments";
+import StatusBadge from "../../components/StatusBadge";
 
 export default function EmployeeList() {
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
-  const [search, setSearch] = useState('');
-  const [departmentId, setDepartmentId] = useState('');
+  const [search, setSearch] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   // Departments only need to be fetched once, to populate the filter dropdown.
   useEffect(() => {
@@ -24,10 +25,15 @@ export default function EmployeeList() {
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setLoading(true);
-      setError('');
-      getAllEmployees({ search: search || undefined, department_id: departmentId || undefined })
+      setError("");
+      getAllEmployees({
+        search: search || undefined,
+        department_id: departmentId || undefined,
+      })
         .then(setEmployees)
-        .catch((err) => setError(err.response?.data?.message || 'Failed to load employees'))
+        .catch((err) =>
+          setError(err.response?.data?.message || "Failed to load employees"),
+        )
         .finally(() => setLoading(false));
     }, 300);
 
@@ -38,8 +44,12 @@ export default function EmployeeList() {
     <div className="mx-auto max-w-6xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="font-serif text-3xl font-bold tracking-tight text-zinc-100">Employees</h1>
-          <p className="mt-1 text-base text-zinc-500">Search, filter, and manage employee accounts.</p>
+          <h1 className="font-serif text-3xl font-bold tracking-tight text-zinc-100">
+            Employees
+          </h1>
+          <p className="mt-1 text-base text-zinc-500">
+            Search, filter, and manage employee accounts.
+          </p>
         </div>
         <Link
           to="/admin/employees/new"
@@ -72,7 +82,11 @@ export default function EmployeeList() {
       </div>
 
       {loading && <p className="text-base text-zinc-500">Loading…</p>}
-      {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">{error}</p>}
+      {error && (
+        <p className="rounded-lg bg-red-500/10 px-3 py-2 text-base text-red-400">
+          {error}
+        </p>
+      )}
 
       {!loading && !error && (
         <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60 shadow-sm">
@@ -81,15 +95,22 @@ export default function EmployeeList() {
               <tr>
                 <th className="px-4 py-2.5 font-medium text-zinc-400">Name</th>
                 <th className="px-4 py-2.5 font-medium text-zinc-400">Email</th>
-                <th className="px-4 py-2.5 font-medium text-zinc-400">Departments</th>
-                <th className="px-4 py-2.5 font-medium text-zinc-400">Status</th>
+                <th className="px-4 py-2.5 font-medium text-zinc-400">
+                  Departments
+                </th>
+                <th className="px-4 py-2.5 font-medium text-zinc-400">
+                  Status
+                </th>
                 <th className="px-4 py-2.5"></th>
                 <th className="px-4 py-2.5"></th>
               </tr>
             </thead>
             <tbody>
               {employees.map((emp) => (
-                <tr key={emp.id} className="border-t border-zinc-800 hover:bg-zinc-800/40">
+                <tr
+                  key={emp.id}
+                  className="border-t border-zinc-800 hover:bg-zinc-800/40"
+                >
                   <td className="px-4 py-2.5">
                     <Link
                       to={`/admin/employees/${emp.id}`}
@@ -100,12 +121,12 @@ export default function EmployeeList() {
                   </td>
                   <td className="px-4 py-2.5 text-zinc-400">{emp.email}</td>
                   <td className="px-4 py-2.5 text-zinc-400">
-                    {emp.departments.map((d) => d.name).join(', ') || '—'}
+                    {emp.departments.map((d) => d.name).join(", ") || "—"}
                   </td>
                   <td className="px-4 py-2.5">
                     <StatusBadge
-                      text={emp.is_active ? 'Active' : 'Inactive'}
-                      color={emp.is_active ? 'green' : 'red'}
+                      text={emp.is_active ? "Active" : "Inactive"}
+                      color={emp.is_active ? "green" : "red"}
                     />
                   </td>
                   <td className="px-4 py-2.5 text-right">
@@ -114,7 +135,13 @@ export default function EmployeeList() {
                       className="inline-flex text-zinc-500 hover:text-emerald-400"
                       aria-label={`View assets assigned to ${emp.full_name}`}
                     >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="h-4 w-4">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.75}
+                        className="h-4 w-4"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -124,25 +151,35 @@ export default function EmployeeList() {
                     </Link>
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                  <Link
-                    to={`/admin/employees/${emp.id}`}
-                    className="inline-flex text-zinc-500 hover:text-emerald-400"
-                    aria-label={`Edit ${emp.full_name}`}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="h-4 w-4">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"
-                      />
-                    </svg>
-                  </Link>
-                </td>
-              </tr>))}
+                    <Link
+                      to={`/admin/employees/${emp.id}`}
+                      className="inline-flex text-zinc-500 hover:text-emerald-400"
+                      aria-label={`Edit ${emp.full_name}`}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.75}
+                        className="h-4 w-4"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"
+                        />
+                      </svg>
+                    </Link>
+                  </td>
+                </tr>
+              ))}
 
               {employees.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-6 text-center text-zinc-500"
+                  >
                     No employees found.
                   </td>
                 </tr>

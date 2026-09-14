@@ -1,12 +1,13 @@
-import api from './axios';
+// department crud calls
+import api from "./axios";
 
 export async function getAllDepartments() {
-  const response = await api.get('/departments');
+  const response = await api.get("/departments");
   return response.data;
 }
 
 export async function createDepartment(name) {
-  const response = await api.post('/departments', { name });
+  const response = await api.post("/departments", { name });
   return response.data;
 }
 

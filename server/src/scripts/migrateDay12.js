@@ -12,12 +12,12 @@
 // Admin-only, like repair_details — never shown to the employee.
 //
 // Safe to re-run: only creates what isn't already in place.
-import pool from '../config/db.js';
+import pool from "../config/db.js";
 
 async function run() {
   const [rows] = await pool.query(
     `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
-     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'request_notes'`
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'request_notes'`,
   );
 
   if (rows.length === 0) {
@@ -33,9 +33,9 @@ async function run() {
         FOREIGN KEY (admin_id) REFERENCES users(id)
       )
     `);
-    console.log('Created request_notes table');
+    console.log("Created request_notes table");
   } else {
-    console.log('request_notes already exists, skipping');
+    console.log("request_notes already exists, skipping");
   }
 
   process.exit(0);

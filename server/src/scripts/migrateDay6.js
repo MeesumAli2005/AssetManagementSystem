@@ -7,33 +7,33 @@
 //
 // Safe to re-run: checks INFORMATION_SCHEMA before adding the column, and
 // the enum MODIFY is a no-op if it already matches.
-import pool from '../config/db.js';
+import pool from "../config/db.js";
 
 async function columnExists(table, column) {
   const [rows] = await pool.query(
     `SELECT COUNT(*) AS count FROM INFORMATION_SCHEMA.COLUMNS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
-    [table, column]
+    [table, column],
   );
   return rows[0].count > 0;
 }
 
 async function run() {
-  if (!(await columnExists('assets', 'usage_state'))) {
+  if (!(await columnExists("assets", "usage_state"))) {
     await pool.query(
-      "ALTER TABLE assets ADD COLUMN usage_state ENUM('active','dormant') NOT NULL DEFAULT 'active' AFTER `condition`"
+      "ALTER TABLE assets ADD COLUMN usage_state ENUM('active','dormant') NOT NULL DEFAULT 'active' AFTER `condition`",
     );
-    console.log('Added assets.usage_state');
+    console.log("Added assets.usage_state");
   } else {
-    console.log('assets.usage_state already exists, skipping');
+    console.log("assets.usage_state already exists, skipping");
   }
 
   await pool.query(
     `ALTER TABLE asset_history MODIFY COLUMN event_type
      ENUM('purchase','assignment','return','repair','status_change','condition_change','retirement','acknowledgement','usage_state_change')
-     NOT NULL`
+     NOT NULL`,
   );
-  console.log('asset_history.event_type enum is up to date');
+  console.log("asset_history.event_type enum is up to date");
 
   process.exit(0);
 }

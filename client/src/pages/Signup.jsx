@@ -1,3 +1,4 @@
+// old signup page, commented out since we don't let people self signup anymore
 // import { useState } from 'react';
 // import { useNavigate, Link } from 'react-router-dom';
 // import { useAuth } from '../context/AuthContext';

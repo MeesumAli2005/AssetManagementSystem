@@ -1,22 +1,17 @@
-import axios from 'axios';
+// shared axios instance, slaps the jwt onto every outgoing request if we have one
+import axios from "axios";
 
-const api = axios.create(
-    {
-        baseURL: 'http://172.20.2.224:5000/api',   
-    }
-);
+const api = axios.create({
+  baseURL: "http://172.20.2.224:5000/api",
+});
 
-api.interceptors.request.use(
-    (config) => 
-    {
-        const token = localStorage.getItem('token');
-    
-        if(token)
-        {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    } 
-);
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 export default api;

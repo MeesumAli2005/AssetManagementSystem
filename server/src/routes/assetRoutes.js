@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 
 import {
   createAsset,
@@ -14,432 +14,72 @@ import {
   acknowledgeAssignment,
   setUsageState,
   getAssetStats,
-} from '../controllers/assetController.js';
+} from "../controllers/assetController.js";
 
-import {uploadDocument, getDocumentsForAsset } from '../controllers/documentController.js';
+import {
+  uploadDocument,
+  getDocumentsForAsset,
+} from "../controllers/documentController.js";
 
-import { requireAuth, requireRole } from '../middleware/auth.js';
-import upload from '../middleware/upload.js';
+import { requireAuth, requireRole } from "../middleware/auth.js";
+import upload from "../middleware/upload.js";
 
 const router = express.Router();
 
-/**
- * @swagger
- * tags:
- *   - name: Assets
- *     description: Asset inventory — create, view, update, retire (admin only — employees do not have inventory access)
- *   - name: Documents
- *     description: Supporting documents (receipts, repair records) attached to an asset
- */
+router.get("/", requireAuth, requireRole("administrator"), getAllAssets);
 
-/**
- * @swagger
- * /api/assets:
- *   get:
- *     summary: List assets, with optional search/filter
- *     tags: [Assets]
- *     parameters:
- *       - in: query
- *         name: search
- *         schema: { type: string }
- *         description: Matches against asset name or asset_tag
- *       - in: query
- *         name: category_id
- *         schema: { type: integer }
- *       - in: query
- *         name: status
- *         schema: { type: string, enum: [available, assigned, under_repair, retired, disposed] }
- *       - in: query
- *         name: condition
- *         schema: { type: string, enum: [new, good, fair, damaged] }
- *       - in: query
- *         name: department_id
- *         schema: { type: integer }
- *         description: Filters to assets currently assigned to someone in this department
- *       - in: query
- *         name: assignee_id
- *         schema: { type: integer }
- *         description: Filters to assets currently assigned to this specific user
- *       - in: query
- *         name: assigned
- *         schema: { type: string, enum: [true, false] }
- *         description: true = has an assignee, false = unassigned, omitted = either
- *       - in: query
- *         name: page
- *         schema: { type: integer, default: 1 }
- *       - in: query
- *         name: limit
- *         schema: { type: integer, default: 10 }
- *     responses:
- *       200:
- *         description: Paginated list of assets
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   type: array
- *                   items: { $ref: '#/components/schemas/Asset' }
- *                 page: { type: integer }
- *                 limit: { type: integer }
- *                 total: { type: integer }
- *                 totalPages: { type: integer }
- */
-router.get('/', requireAuth, requireRole('administrator'), getAllAssets);
+router.get("/mine", requireAuth, getMyAssignedAssets);
 
-/**
- * @swagger
- * /api/assets/mine:
- *   get:
- *     summary: List assets currently assigned to the logged-in employee, with a status/condition summary
- *     tags: [Assets]
- *     responses:
- *       200:
- *         description: Assigned assets plus a bucketed summary (active/dormant/under_repair)
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data: { type: array, items: { type: object } }
- *                 summary:
- *                   type: object
- *                   properties:
- *                     active: { type: integer }
- *                     dormant: { type: integer }
- *                     under_repair: { type: integer }
- */
-router.get('/mine', requireAuth, getMyAssignedAssets);
-
-/**
- * @swagger
- * /api/assets/pending-acknowledgements:
- *   get:
- *     summary: List assignments made to the logged-in employee that they haven't acknowledged receipt of yet
- *     tags: [Assets]
- *     responses:
- *       200: { description: List of pending assignments }
- */
-router.get('/pending-acknowledgements', requireAuth, getPendingAcknowledgements);
-
-/**
- * @swagger
- * /api/assets/my-acknowledgements:
- *   get:
- *     summary: List every assignment event the logged-in employee has ever had, acknowledged or not — full history, not just what's pending
- *     tags: [Assets]
- *     responses:
- *       200: { description: List of assignment events }
- */
-router.get('/my-acknowledgements', requireAuth, getMyAcknowledgements);
-
-/**
- * @swagger
- * /api/assets/acknowledgements/{id}:
- *   get:
- *     summary: Get full details of a single assignment event (employee self-service — must be your own)
- *     tags: [Assets]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: integer }
- *     responses:
- *       200: { description: Assignment event detail }
- *       403: { description: Not your acknowledgement, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- *       404: { description: Acknowledgement not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- */
-router.get('/acknowledgements/:id', requireAuth, getAcknowledgementById);
-
-/**
- * @swagger
- * /api/assets/stats:
- *   get:
- *     summary: Asset counts by status, for the admin dashboard (total + KPI/status-breakdown)
- *     tags: [Assets]
- *     responses:
- *       200:
- *         description: Asset counts
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 total: { type: integer }
- *                 byStatus:
- *                   type: object
- *                   properties:
- *                     available: { type: integer }
- *                     assigned: { type: integer }
- *                     under_repair: { type: integer }
- *                     retired: { type: integer }
- *                     disposed: { type: integer }
- *                 byCondition:
- *                   type: object
- *                   properties:
- *                     new: { type: integer }
- *                     good: { type: integer }
- *                     fair: { type: integer }
- *                     damaged: { type: integer }
- */
-router.get('/stats', requireAuth, requireRole('administrator'), getAssetStats);
-
-/**
- * @swagger
- * /api/assets/{id}:
- *   get:
- *     summary: Get one asset with its documents and spec values. Admins can view any asset (plus its full history log); employees can only view an asset they currently or previously had assigned to them, and only see the history entries that fall within their own assignment window(s).
- *     tags: [Assets]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: integer }
- *     responses:
- *       200:
- *         description: Asset detail
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/AssetDetail' }
- *       403: { description: 'Employee has no history with this asset', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- *       404: { description: Asset not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- */
-router.get('/:id', requireAuth, getAssetById);
-
-/**
- * @swagger
- * /api/assets:
- *   post:
- *     summary: Create an asset (admin only). asset_tag and name are no longer admin-supplied — asset_tag is auto-generated and name is derived as "brand category #id".
- *     tags: [Assets]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [brand, category_id]
- *             properties:
- *               brand: { type: string }
- *               category_id: { type: integer }
- *               purchase_date: { type: string, format: date }
- *               purchase_cost: { type: number }
- *               condition: { type: string, enum: [new, good, fair, damaged], default: new }
- *               spec_values:
- *                 type: array
- *                 items: { $ref: '#/components/schemas/SpecValue' }
- *     responses:
- *       201:
- *         description: Asset created
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 id: { type: integer }
- *                 asset_tag: { type: string }
- *                 name: { type: string }
- *       400: { description: 'Missing required fields, invalid category_id/condition, or spec_values fail category validation', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- *       403: { description: Not an administrator, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- */
-router.post('/', requireAuth, requireRole('administrator'), createAsset);
-
-/**
- * @swagger
- * /api/assets/{id}:
- *   put:
- *     summary: Update an asset (admin only). Logs status_change/condition_change history entries when those fields change. Changing brand (or category_id) recomputes and re-stores the derived display name.
- *     tags: [Assets]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: integer }
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               brand: { type: string }
- *               category_id: { type: integer }
- *               purchase_date: { type: string, format: date }
- *               purchase_cost: { type: number }
- *               status: { type: string, enum: [available, assigned, under_repair, retired] }
- *               condition: { type: string, enum: [new, good, fair, damaged] }
- *               spec_values:
- *                 type: array
- *                 items: { $ref: '#/components/schemas/SpecValue' }
- *     responses:
- *       200: { description: Asset updated }
- *       400: { description: Invalid status/condition or spec_values fail category validation, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- *       403: { description: Not an administrator, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- *       404: { description: Asset not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- */
-router.put('/:id', requireAuth, requireRole('administrator'), updateAsset);
-
-/**
- * @swagger
- * /api/assets/{id}/retire:
- *   post:
- *     summary: Retire an asset (admin only). History is preserved, never deleted.
- *     tags: [Assets]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: integer }
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               reason: { type: string, description: 'Defaults to "Asset retired" if omitted' }
- *     responses:
- *       200: { description: Asset retired }
- *       403: { description: Not an administrator, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- *       404: { description: Asset not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- */
-router.post('/:id/retire', requireAuth, requireRole('administrator'), retireAsset);
-
-/**
- * @swagger
- * /api/assets/{id}/dispose:
- *   post:
- *     summary: Dispose of an asset (admin only) — a further, terminal step beyond retirement. History is preserved, never deleted.
- *     tags: [Assets]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: integer }
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               reason: { type: string, description: 'Defaults to "Asset disposed of" if omitted' }
- *     responses:
- *       200: { description: Asset disposed of }
- *       403: { description: Not an administrator, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- *       404: { description: Asset not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- */
-router.post('/:id/dispose', requireAuth, requireRole('administrator'), disposeAsset);
-
-/**
- * @swagger
- * /api/assets/{id}/acknowledge:
- *   post:
- *     summary: Acknowledge receipt of an asset assigned to you (employee self-service)
- *     tags: [Assets]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: integer }
- *     responses:
- *       200: { description: Acknowledged }
- *       404: { description: No pending assignment to acknowledge for this asset, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- */
-router.post('/:id/acknowledge', requireAuth, acknowledgeAssignment);
-
-/**
- * @swagger
- * /api/assets/{id}/usage-state:
- *   patch:
- *     summary: Mark an asset assigned to you as active or dormant (employee self-service)
- *     tags: [Assets]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: integer }
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [usage_state]
- *             properties:
- *               usage_state: { type: string, enum: [active, dormant] }
- *     responses:
- *       200: { description: Usage state updated }
- *       400: { description: Invalid usage_state, or asset isn't currently assigned, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- *       403: { description: Asset isn't assigned to you, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- *       404: { description: Asset not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- */
-router.patch('/:id/usage-state', requireAuth, setUsageState);
-
-/**
- * @swagger
- * /api/assets/{asset_id}/documents:
- *   post:
- *     summary: Upload a supporting document for an asset (admin only)
- *     tags: [Documents]
- *     parameters:
- *       - in: path
- *         name: asset_id
- *         required: true
- *         schema: { type: integer }
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             required: [file]
- *             properties:
- *               file:
- *                 type: string
- *                 format: binary
- *                 description: PDF, PNG, or JPG — max 10MB
- *               document_type:
- *                 type: string
- *                 enum: [receipt, repair_record, other]
- *                 default: other
- *     responses:
- *       201:
- *         description: Document uploaded
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/AssetDocument' }
- *       400: { description: No file uploaded, or file type/size rejected, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- *       403: { description: Not an administrator, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- *       404: { description: Asset not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- */
-// document uploading by admin only
-router.post(
-  '/:asset_id/documents',
+router.get(
+  "/pending-acknowledgements",
   requireAuth,
-  requireRole('administrator'),
-  upload.single('file'),
-  uploadDocument
+  getPendingAcknowledgements,
 );
 
-/**
- * @swagger
- * /api/assets/{asset_id}/documents:
- *   get:
- *     summary: List documents attached to an asset
- *     tags: [Documents]
- *     parameters:
- *       - in: path
- *         name: asset_id
- *         required: true
- *         schema: { type: integer }
- *     responses:
- *       200:
- *         description: List of documents
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items: { $ref: '#/components/schemas/AssetDocument' }
- */
-router.get('/:asset_id/documents', requireAuth, requireRole('administrator'), getDocumentsForAsset);
+router.get("/my-acknowledgements", requireAuth, getMyAcknowledgements);
+
+router.get("/acknowledgements/:id", requireAuth, getAcknowledgementById);
+
+router.get("/stats", requireAuth, requireRole("administrator"), getAssetStats);
+
+router.get("/:id", requireAuth, getAssetById);
+
+router.post("/", requireAuth, requireRole("administrator"), createAsset);
+
+router.put("/:id", requireAuth, requireRole("administrator"), updateAsset);
+
+router.post(
+  "/:id/retire",
+  requireAuth,
+  requireRole("administrator"),
+  retireAsset,
+);
+
+router.post(
+  "/:id/dispose",
+  requireAuth,
+  requireRole("administrator"),
+  disposeAsset,
+);
+
+router.post("/:id/acknowledge", requireAuth, acknowledgeAssignment);
+
+router.patch("/:id/usage-state", requireAuth, setUsageState);
+
+// document uploading by admin only
+router.post(
+  "/:asset_id/documents",
+  requireAuth,
+  requireRole("administrator"),
+  upload.single("file"),
+  uploadDocument,
+);
+
+router.get(
+  "/:asset_id/documents",
+  requireAuth,
+  requireRole("administrator"),
+  getDocumentsForAsset,
+);
 
 export default router;

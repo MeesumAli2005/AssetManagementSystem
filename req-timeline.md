@@ -240,30 +240,34 @@ before it.
 ## Week 1 — Foundation, Employees and Assets
 
 ### Day 1 — Foundation and Data Model
+
 - Project setup, environments, base configuration.
 - Database schema for all entities: users and roles, employees, departments, categories, assets,
   assignments, requests, repairs, documents, asset history, audit logs.
 
 ### Day 2 — Authentication and Access Control
+
 - Login, logout, password reset.
 - Signup and/or administrator-created accounts.
 - Role-based access control for employee and administrator.
 - Role-based routing and the application shell for both interfaces.
 
 ### Day 3 — Asset Management
+
 - Asset create, update, view, and manage.
 - Categories, unique identifier, status and condition fields.
 - Asset detail view.
 - Supporting document upload (receipts, repair records).
 
-
 ### Day 4 — Employee Management
+
 - Employee create, update, activate/deactivate, and profile management.
 - Departments.
 - Employee listing, search, and detail view.
 - Administrator view of all employees.
 
 ### Day 5 — Inventory and Bulk Import
+
 - Inventory listing with search, filter, and pagination.
 - Views by employee, department, category, status, and assigned/unassigned.
 - CSV/Excel bulk import with row validation and an import error report. (TBD)
@@ -271,12 +275,14 @@ before it.
 ## Week 2 — Lifecycle Workflows and Release
 
 ### Day 6 — Asset Assignment
+
 - Assign an asset to an employee or department; record the assignment.
 - Employee acknowledgement of receipt.
 - Employee "My Assets" view with status, condition, and summary (active, dormant, under repair).
 - Administrator view of each employee's assigned assets.
 
 ### Day 7 — Asset Requests
+
 - Employee submits an asset request, considering department, existing assets, and available
   inventory.
 - Administrator request queue: review, approve, or reject.
@@ -284,12 +290,14 @@ before it.
 - Request status tracking, visible to the employee.
 
 ### Day 8 — Returns and Repairs
+
 - Return request, administrator inspection, confirmation, and status update.
 - Repair request, administrator review, under-repair state, repair details, and return to employee
   or inventory.
 - Administrator records and updates asset status and condition.
 
 ### Day 9 — Retirement, History and Audit Logs
+
 - Retire or dispose of an asset; removed from active inventory with history preserved.
 - Asset history timeline: purchase, assignment, return, repairs, status and condition changes,
   retirement.
@@ -297,6 +305,7 @@ before it.
 - Audit log capture of administrative actions.
 
 ### Day 10 — Dashboards, Validation and Release
+
 - Administrator dashboard: asset statistics and pending actions.
 - Employee dashboard.
 - Validation, error handling, and permission review across all interfaces.

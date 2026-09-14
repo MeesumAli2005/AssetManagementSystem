@@ -1,61 +1,59 @@
-import api from './axios';
+// request workflow calls - create, review, assign, return/repair steps
+import api from "./axios";
 
-export async function createRequest(payload)
-{
-  const response = await api.post('/requests', payload);
+export async function createRequest(payload) {
+  const response = await api.post("/requests", payload);
   return response.data;
 }
 
-export async function getMyRequests()
-{
-  const response = await api.get('/requests/mine');
+export async function getMyRequests() {
+  const response = await api.get("/requests/mine");
   return response.data;
 }
 
-export async function getAllRequests({ status, search } = {})
-{
-  const response = await api.get('/requests', { params: { status, search } });
+export async function getAllRequests({ status, search } = {}) {
+  const response = await api.get("/requests", { params: { status, search } });
   return response.data;
 }
 
-export async function getRequestById(id)
-{
+export async function getRequestById(id) {
   const response = await api.get(`/requests/${id}`);
   return response.data;
 }
 
-export async function addRequestNote(id, note)
-{
+export async function addRequestNote(id, note) {
   const response = await api.post(`/requests/${id}/notes`, { note });
   return response.data;
 }
 
-export async function reviewRequest(id, status, extra)
-{
-  const response = await api.patch(`/requests/${id}/review`, { status, ...extra });
+export async function reviewRequest(id, status, extra) {
+  const response = await api.patch(`/requests/${id}/review`, {
+    status,
+    ...extra,
+  });
   return response.data;
 }
 
-export async function assignAssetToRequest(id, asset_id)
-{
+export async function assignAssetToRequest(id, asset_id) {
   const response = await api.post(`/requests/${id}/assign`, { asset_id });
   return response.data;
 }
 
-export async function completeReturn(id, notes)
-{
-  const response = await api.patch(`/requests/${id}/complete-return`, { notes });
+export async function completeReturn(id, notes) {
+  const response = await api.patch(`/requests/${id}/complete-return`, {
+    notes,
+  });
   return response.data;
 }
 
-export async function acknowledgeReturn(id)
-{
+export async function acknowledgeReturn(id) {
   const response = await api.patch(`/requests/${id}/acknowledge-return`);
   return response.data;
 }
 
-export async function completeRepair(id, repair_notes)
-{
-  const response = await api.patch(`/requests/${id}/complete-repair`, { repair_notes });
+export async function completeRepair(id, repair_notes) {
+  const response = await api.patch(`/requests/${id}/complete-repair`, {
+    repair_notes,
+  });
   return response.data;
 }

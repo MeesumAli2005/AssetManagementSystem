@@ -1,7 +1,12 @@
-import api from './axios';
+// just the change-password call, login/logout live in AuthContext instead
+import api from "./axios";
 
-export async function changePassword(current_password, new_password, confirm_password) {
-  const response = await api.post('/auth/change-password', {
+export async function changePassword(
+  current_password,
+  new_password,
+  confirm_password,
+) {
+  const response = await api.post("/auth/change-password", {
     current_password,
     new_password,
     confirm_password,
