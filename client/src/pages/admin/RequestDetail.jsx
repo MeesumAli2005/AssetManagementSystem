@@ -429,7 +429,7 @@ export default function RequestDetail() {
       <div className="mt-8">
         <h2 className="mb-3 text-lg font-bold text-zinc-200">Internal notes</h2>
         <p className="mb-3 text-sm text-zinc-500">
-          Private Note, never shown to the employee. Can be added at any point,
+          Private note, never shown to the employee. Can be added at any point,
           regardless of status.
         </p>
 

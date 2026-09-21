@@ -24,7 +24,7 @@ export async function uploadDocument(req, res) {
       ? document_type
       : "other";
 
-    const filePath = `/${req.file.path.replace(/\\/g, "/")}`;
+    const filePath = `/api/${req.file.path.replace(/\\/g, "/")}`;
 
     try {
       const [result] = await pool.query(

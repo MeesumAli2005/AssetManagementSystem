@@ -4,7 +4,7 @@ import {
   logout,
   changePassword,
 } from "../controllers/authController.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireAuthOptional } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -12,7 +12,7 @@ const router = express.Router();
 
 router.post("/login", login);
 
-router.post("/logout", logout);
+router.post("/logout", requireAuthOptional, logout);
 
 router.post("/change-password", requireAuth, changePassword); // must be logged in — we need req.user.id
 

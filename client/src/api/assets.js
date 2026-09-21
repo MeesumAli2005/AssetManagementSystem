@@ -1,4 +1,4 @@
-// all the asset endpoints live here - listing, crud, retire/dispose, acks, stats
+// all the asset endpoints are live here listing, crud, retire/dispose, acks, stats
 import api from "./axios";
 
 export async function getAllAssets({

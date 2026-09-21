@@ -1,4 +1,3 @@
-// swagger/openapi spec setup, docs get pulled from jsdoc comments in the route files
 import swaggerJsdoc from "swagger-jsdoc";
 
 const options = {
@@ -11,7 +10,7 @@ const options = {
         "REST API for the Asset Management and Tracking System — authentication, employee/admin accounts, asset categories, asset inventory, and supporting document uploads.",
     },
     servers: [
-      { url: "http://172.20.2.224:5000", description: "Local dev server" },
+      { url: "http://172.20.2.224:5000", description: "LOCAL DEV" }
     ],
 
     components: {
@@ -205,7 +204,7 @@ const options = {
 
     security: [{ bearerAuth: [] }],
   },
-  apis: ["./src/routes/*.js"],
+  apis: ["./swagger/*.yml"],
 };
 
 const swaggerSpec = swaggerJsdoc(options);

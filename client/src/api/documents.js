@@ -15,12 +15,12 @@ export async function uploadDocument(assetId, file, documentType) {
   return response.data;
 }
 
-// server.js serves /uploads behind requireAuth, so a plain <a href> tab
+// server.js serves /api/uploads behind requireAuth, so a plain <a href> tab
 // open won't carry the JWT — fetch it through axios (which does attach the
 // header via the interceptor) as a blob, then open that instead.
 export async function downloadDocument(fileUrl) {
   const response = await api.get(fileUrl, {
-    baseURL: "http://172.20.2.224:5000",
+    baseURL: api.defaults.baseURL.replace(/\/api$/, ""),
     responseType: "blob",
   });
   const blobUrl = URL.createObjectURL(response.data);

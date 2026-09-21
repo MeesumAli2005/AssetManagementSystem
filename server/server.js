@@ -1,20 +1,12 @@
-// entry point, wires up all the routes and the error handler
+// entry point for any express app is the server.js file, this wires up all the routes and the error handler
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import multer from "multer";
 import swaggerUi from "swagger-ui-express";
-import authRoutes from "./src/routes/authRoutes.js";
-import adminRoutes from "./src/routes/adminRoutes.js";
 
-import categoryRoutes from "./src/routes/categoryRoutes.js";
-import assetRoutes from "./src/routes/assetRoutes.js";
+import router from "./src/routes/index.js";
 
-import departmentRoutes from "./src/routes/departmentRoutes.js";
-import employeeRoutes from "./src/routes/employeeRoutes.js";
-import requestRoutes from "./src/routes/requestRoutes.js";
-
-import { requireAuth } from "./src/middleware/auth.js";
 import { FileTypeError } from "./src/middleware/upload.js";
 import swaggerSpec from "./src/config/swagger.js";
 
@@ -24,30 +16,13 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-
-// Uploaded documents (receipts, repair records) may contain sensitive info —
-// require a valid login before serving any file back.
-app.use("/uploads", requireAuth, express.static("uploads"));
-
-app.use("/api/auth", authRoutes);
-app.use("/api/admin", adminRoutes);
-
-app.use("/api/categories", categoryRoutes);
-app.use("/api/assets", assetRoutes);
-
-app.use("/api/departments", departmentRoutes);
-app.use("/api/employees", employeeRoutes);
-
-app.use("/api/requests", requestRoutes);
+app.use("/api", router);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.get("/api-docs.json", (req, res) => res.json(swaggerSpec)); // raw spec, e.g. for Postman's "Import from link"
+app.get("/api-docs.json", (req, res) => res.json(swaggerSpec)); 
 
 app.get("/", (req, res) => res.json({ status: "API running" }));
 
-// Centralized error handler — without this, thrown errors (e.g. multer's
-// fileFilter rejection) fall through to Express's default handler, which
-// returns an HTML page with a full stack trace instead of JSON.
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError || err instanceof FileTypeError) {
     return res.status(400).json({ message: err.message });
