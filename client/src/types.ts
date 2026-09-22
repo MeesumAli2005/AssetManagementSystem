@@ -1,9 +1,18 @@
 // Shared shapes returned by the backend, used across the api/ layer so
 // every caller gets the same types instead of each file re-declaring them.
+//
+// Grounded directly in database/asset_management.sql's CREATE TABLE
+// statements, not guessed from the JS controllers. Two things the DDL
+// makes clear that aren't obvious from reading the backend code at all:
+//   - tinyint(1) columns (is_active, is_required) come back as JS `number`
+//     (0/1), not `boolean` — mysql2 doesn't auto-convert these unless you
+//     configure it to, and db.js doesn't.
+//   - decimal(10,2) columns (purchase_cost) come back as `string`, not
+//     `number` — mysql2's default, to avoid float rounding on money.
 
 export interface User {
   id: number;
-  full_name: string;
+  full_name: string | null;
   email: string;
   role: "employee" | "administrator";
 }
@@ -18,7 +27,8 @@ export interface CategorySpec {
   category_id: number;
   spec_name: string;
   spec_type: "text" | "number" | "boolean" | "dropdown";
-  is_required: boolean;
+  is_required: number;
+  created_at: string;
 }
 
 export interface Category {
@@ -30,7 +40,8 @@ export interface Category {
 export interface Department {
   id: number;
   name: string;
-  is_active: boolean;
+  is_active: number;
+  created_at: string;
 }
 
 export type AssetStatus =
@@ -41,19 +52,20 @@ export type AssetStatus =
   | "disposed";
 
 export type AssetCondition = "new" | "good" | "fair" | "damaged";
+export type AssetUsageState = "active" | "dormant";
 
 export interface Asset {
   id: number;
   asset_tag: string;
-  name: string;
+  name: string | null;
   brand: string | null;
   category_id: number;
   category_name: string;
   purchase_date: string | null;
-  purchase_cost: number | null;
+  purchase_cost: string | null;
   status: AssetStatus;
   condition: AssetCondition;
-  usage_state: string;
+  usage_state: AssetUsageState;
   current_assignee_id: number | null;
   current_assignee_name: string | null;
   created_at: string;
@@ -61,11 +73,23 @@ export interface Asset {
   disposed_at: string | null;
 }
 
+export type AssetHistoryEventType =
+  | "purchase"
+  | "assignment"
+  | "return"
+  | "repair"
+  | "status_change"
+  | "condition_change"
+  | "retirement"
+  | "disposal"
+  | "acknowledgement"
+  | "usage_state_change";
+
 export interface AssetHistoryEntry {
   id: number;
   performed_by: number | null;
   performed_by_name: string | null;
-  event_type: string;
+  event_type: AssetHistoryEventType;
   description: string;
   asset_id: number;
   created_at: string;
@@ -75,7 +99,7 @@ export interface AssetDocument {
   id: number;
   asset_id: number;
   document_type: "receipt" | "repair_record" | "other";
-  file_url: string;
+  file_url: string | null;
   uploaded_by: number | null;
   uploaded_by_name: string | null;
   created_at: string;
@@ -87,7 +111,7 @@ export interface AssetDetail extends Asset {
   spec_values: {
     id: number;
     category_spec_id: number;
-    value: string;
+    value: string | null;
     spec_name: string;
     spec_type: string;
   }[];
@@ -108,21 +132,22 @@ export interface AssetStats {
 }
 
 // A lighter asset shape — this is what comes back nested inside a profile's
-// assigned_assets, not the full Asset row.
+// assigned_assets, not the full Asset row (employeeController selects only
+// these five columns for that query).
 export interface AssignedAssetSummary {
   id: number;
   asset_tag: string;
-  name: string;
+  name: string | null;
   status: AssetStatus;
   condition: AssetCondition;
 }
 
 export interface MyProfile {
   id: number;
-  full_name: string;
+  full_name: string | null;
   email: string;
   role: "employee" | "administrator";
-  is_active: boolean;
+  is_active: number;
   created_at: string;
   updated_at: string;
   departments: { id: number; name: string }[];
@@ -131,53 +156,63 @@ export interface MyProfile {
 
 export interface Employee {
   id: number;
-  full_name: string;
+  full_name: string | null;
   email: string;
   role: "employee" | "administrator";
-  is_active: boolean;
+  is_active: number;
 }
 
-// requests.status_at_time/repair_details etc. come straight off the
-// `requests` table (r.*) plus a few joined display names — this covers
-// the fields every endpoint in requestController.js actually selects, but
-// wasn't reverse-engineered from the DB schema directly, so treat it as a
-// best-effort shape rather than gospel if something's missing.
+export type RequestType = "asset" | "return" | "repair";
+export type RequestStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "completed"
+  | "sent_for_repair";
+
+// Matches every column of the `requests` table except `repair_details`,
+// which requestController.js's stripPrivateFields() removes before the
+// response ever reaches the client — plus the display names joined in from
+// categories/assets/users.
 export interface RequestRecord {
   id: number;
+  request_type: RequestType;
   employee_id: number;
-  request_type: "asset" | "return" | "repair";
-  category_id: number | null;
-  category_name: string | null;
   asset_id: number | null;
   asset_name: string | null;
   asset_tag: string | null;
-  status: string;
+  category_id: number | null;
+  category_name: string | null;
   reason: string | null;
-  reviewed_at: string | null;
+  completion_notes: string | null;
+  review_notes: string | null;
+  status: RequestStatus | null;
   reviewed_by: number | null;
   reviewed_by_name: string | null;
+  resulting_asset_id: number | null;
+  created_at: string;
+  reviewed_at: string | null;
   completed_at: string | null;
   completed_by: number | null;
   acknowledged_at: string | null;
-  created_at: string;
-}
-
-export interface Acknowledgement {
-  asset_id: number;
-  name: string;
-  category_name: string | null;
-  condition: AssetCondition;
-  is_active: boolean;
-  assigned_at: string;
-  assigned_by_name: string | null;
-  acknowledged_at: string | null;
-  returned_at: string | null;
 }
 
 export interface RequestNote {
   id: number;
   note: string;
-  status_at_time: string;
+  status_at_time: RequestStatus;
   created_at: string;
   admin_name: string | null;
+}
+
+export interface Acknowledgement {
+  asset_id: number;
+  name: string | null;
+  category_name: string | null;
+  condition: AssetCondition;
+  is_active: number;
+  assigned_at: string;
+  assigned_by_name: string | null;
+  acknowledged_at: string | null;
+  returned_at: string | null;
 }
