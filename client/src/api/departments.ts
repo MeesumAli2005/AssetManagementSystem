@@ -1,22 +1,29 @@
 // department crud calls
 import api from "./axios";
+import type { Department } from "../types";
 
 export async function getAllDepartments() {
-  const response = await api.get("/departments");
+  const response = await api.get<Department[]>("/departments");
   return response.data;
 }
 
-export async function createDepartment(name) {
-  const response = await api.post("/departments", { name });
+export async function createDepartment(name: string) {
+  const response = await api.post<Department>("/departments", { name });
   return response.data;
 }
 
-export async function updateDepartment(id, { name, is_active }) {
-  const response = await api.put(`/departments/${id}`, { name, is_active });
+export async function updateDepartment(
+  id: number,
+  { name, is_active }: { name: string; is_active: boolean },
+) {
+  const response = await api.put<{ message: string }>(`/departments/${id}`, {
+    name,
+    is_active,
+  });
   return response.data;
 }
 
-export async function deleteDepartment(id) {
-  const response = await api.delete(`/departments/${id}`);
+export async function deleteDepartment(id: number) {
+  const response = await api.delete<{ message: string }>(`/departments/${id}`);
   return response.data;
 }

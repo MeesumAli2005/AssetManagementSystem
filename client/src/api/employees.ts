@@ -1,25 +1,31 @@
 // employee-facing api calls, profile stuff and admin employee management
 import api from "./axios";
+import type { Employee, MyProfile } from "../types";
 
-export async function getAllEmployees({ search, department_id } = {}) {
-  const response = await api.get("/employees", {
+export async function getAllEmployees({
+  search,
+  department_id,
+}: { search?: string; department_id?: number } = {}) {
+  const response = await api.get<Employee[]>("/employees", {
     params: { search, department_id },
   });
   return response.data;
 }
 
-export async function getEmployeeById(id) {
-  const response = await api.get(`/employees/${id}`);
+export async function getEmployeeById(id: number) {
+  const response = await api.get<Employee>(`/employees/${id}`);
   return response.data;
 }
 
 export async function getMyProfile() {
-  const response = await api.get("/employees/me");
+  const response = await api.get<MyProfile>("/employees/me");
   return response.data;
 }
 
-export async function updateMyProfile(full_name) {
-  const response = await api.put("/employees/me", { full_name });
+export async function updateMyProfile(full_name: string) {
+  const response = await api.put<{ message: string }>("/employees/me", {
+    full_name,
+  });
   return response.data;
 }
 
@@ -28,33 +34,45 @@ export async function createEmployee({
   email,
   temporary_password,
   role,
+}: {
+  full_name: string;
+  email: string;
+  temporary_password: string;
+  role: string;
 }) {
-  const response = await api.post("/employees", {
-    full_name,
-    email,
-    temporary_password,
-    role,
-  });
+  const response = await api.post<{ id: number; email: string; role: string }>(
+    "/employees",
+    { full_name, email, temporary_password, role },
+  );
   return response.data;
 }
 
-export async function updateEmployee(id, { full_name, department_ids }) {
-  const response = await api.put(`/employees/${id}`, {
+export async function updateEmployee(
+  id: number,
+  { full_name, department_ids }: { full_name: string; department_ids: number[] },
+) {
+  const response = await api.put<{ message: string }>(`/employees/${id}`, {
     full_name,
     department_ids,
   });
   return response.data;
 }
 
-export async function setEmployeeActiveStatus(id, is_active) {
-  const response = await api.patch(`/employees/${id}/status`, { is_active });
+export async function setEmployeeActiveStatus(id: number, is_active: boolean) {
+  const response = await api.patch<{ message: string }>(
+    `/employees/${id}/status`,
+    { is_active },
+  );
   return response.data;
 }
 
-export async function resetEmployeePassword(user_id, temporary_password) {
-  const response = await api.post("/admin/employees/reset-password", {
-    user_id,
-    temporary_password,
-  });
+export async function resetEmployeePassword(
+  user_id: number,
+  temporary_password: string,
+) {
+  const response = await api.post<{ message: string }>(
+    "/admin/employees/reset-password",
+    { user_id, temporary_password },
+  );
   return response.data;
 }
