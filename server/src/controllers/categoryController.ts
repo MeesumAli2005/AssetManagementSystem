@@ -1,9 +1,11 @@
 // category crud plus the specs that hang off each category
+import type { Request, Response } from "express";
+import type { RowDataPacket, ResultSetHeader } from "mysql2";
 import pool from "../config/db.js";
 
 const VALID_SPEC_TYPES = ["text", "number", "boolean", "dropdown"];
 
-export async function createCategory(req, res) {
+export async function createCategory(req: Request, res: Response) {
   // we need to make sure the transactions(filling up the category and its specs) are atomic
   const connection = await pool.getConnection();
   try {
@@ -30,7 +32,7 @@ export async function createCategory(req, res) {
     }
 
     await connection.beginTransaction();
-    const [existing] = await connection.query(
+    const [existing] = await connection.query<RowDataPacket[]>(
       "SELECT id FROM categories WHERE name =?",
       [name],
     );
@@ -40,7 +42,7 @@ export async function createCategory(req, res) {
       return res.status(409).json({ message: "Category already exists" });
     }
 
-    const [categoryResult] = await connection.query(
+    const [categoryResult] = await connection.query<ResultSetHeader>(
       "INSERT INTO categories (name) VALUES (?)",
       [name],
     );
@@ -50,7 +52,7 @@ export async function createCategory(req, res) {
 
     if (specs && specs.length > 0) {
       for (const spec of specs) {
-        const [specResult] = await connection.query(
+        const [specResult] = await connection.query<ResultSetHeader>(
           `INSERT INTO category_specs (category_id, spec_name, spec_type, is_required)
                 VALUES (?, ?, ?, ?)`,
           [
@@ -80,12 +82,12 @@ export async function createCategory(req, res) {
   }
 }
 
-export async function getAllCategories(req, res) {
+export async function getAllCategories(req: Request, res: Response) {
   try {
-    const [categories] = await pool.query(
+    const [categories] = await pool.query<RowDataPacket[]>(
       "SELECT * FROM categories ORDER BY name",
     );
-    const [specs] = await pool.query(
+    const [specs] = await pool.query<RowDataPacket[]>(
       "SELECT * FROM category_specs ORDER BY id",
     );
 
@@ -101,10 +103,10 @@ export async function getAllCategories(req, res) {
   }
 }
 
-export async function getCategoryById(req, res) {
+export async function getCategoryById(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const [categoryRows] = await pool.query(
+    const [categoryRows] = await pool.query<RowDataPacket[]>(
       "SELECT * FROM categories WHERE id =?",
       [id],
     );
@@ -113,7 +115,7 @@ export async function getCategoryById(req, res) {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    const [specs] = await pool.query(
+    const [specs] = await pool.query<RowDataPacket[]>(
       "SELECT * FROM category_specs WHERE category_id =?",
       [id],
     );
@@ -125,14 +127,14 @@ export async function getCategoryById(req, res) {
   }
 }
 
-export async function updateCategory(req, res) {
+export async function updateCategory(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const { name } = req.body;
     if (!name)
       return res.status(400).json({ message: "Category name is required" });
 
-    const [result] = await pool.query(
+    const [result] = await pool.query<ResultSetHeader>(
       "UPDATE categories SET name = ? WHERE id = ?",
       [name, id],
     );
@@ -146,11 +148,11 @@ export async function updateCategory(req, res) {
   }
 }
 
-export async function deleteCategory(req, res) {
+export async function deleteCategory(req: Request, res: Response) {
   try {
     const { id } = req.params;
 
-    const [assetsUsingIt] = await pool.query(
+    const [assetsUsingIt] = await pool.query<RowDataPacket[]>(
       "SELECT id FROM assets WHERE category_id = ? LIMIT 1",
       [id],
     );
@@ -163,11 +165,10 @@ export async function deleteCategory(req, res) {
 
     try {
       await connection.beginTransaction();
-      await connection.query(
-        "DELETE FROM category_specs WHERE category_id = ?",
-        [id],
-      );
-      const [result] = await connection.query(
+      await connection.query("DELETE FROM category_specs WHERE category_id = ?", [
+        id,
+      ]);
+      const [result] = await connection.query<ResultSetHeader>(
         "DELETE FROM categories WHERE id = ?",
         [id],
       );
@@ -188,7 +189,7 @@ export async function deleteCategory(req, res) {
 }
 
 // ---------------------------------------------------------------------
-export async function addSpecToCategory(req, res) {
+export async function addSpecToCategory(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const { spec_name, spec_type, is_required } = req.body;
@@ -202,7 +203,7 @@ export async function addSpecToCategory(req, res) {
       });
     }
 
-    const [categoryRows] = await pool.query(
+    const [categoryRows] = await pool.query<RowDataPacket[]>(
       "SELECT id FROM categories WHERE id = ?",
       [id],
     );
@@ -210,7 +211,7 @@ export async function addSpecToCategory(req, res) {
     if (categoryRows.length === 0)
       return res.status(404).json({ message: "Category not found" });
 
-    const [result] = await pool.query(
+    const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO category_specs (category_id, spec_name, spec_type, is_required)
         VALUES (?, ?, ?, ?)`,
       [id, spec_name, spec_type || "text", !!is_required],
@@ -229,10 +230,10 @@ export async function addSpecToCategory(req, res) {
   }
 }
 
-export async function deleteSpec(req, res) {
+export async function deleteSpec(req: Request, res: Response) {
   try {
     const { specId } = req.params;
-    const [result] = await pool.query(
+    const [result] = await pool.query<ResultSetHeader>(
       "DELETE FROM category_specs WHERE id = ?",
       [specId],
     );

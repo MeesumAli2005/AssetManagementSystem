@@ -9,15 +9,17 @@
 // belong to more than one department).
 
 import bcrypt from "bcrypt";
+import type { Request, Response } from "express";
+import type { RowDataPacket } from "mysql2";
 import pool from "../config/db.js";
 
 // these are the self service functions
-export async function getMyProfile(req, res) {
+export async function getMyProfile(req: Request, res: Response) {
   try {
     // req.user.id comes from the JWT - it's whoever is currently logged in
-    const myId = req.user.id;
+    const myId = req.user!.id;
 
-    const [users] = await pool.query(
+    const [users] = await pool.query<RowDataPacket[]>(
       `
         SELECT id, full_name, email, role, is_active, created_at, updated_at
         FROM users WHERE id = ? `,
@@ -30,10 +32,10 @@ export async function getMyProfile(req, res) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const myProfile = users[0];
+    const myProfile = users[0]!;
 
     // depts I am assigned to
-    const [departments] = await pool.query(
+    const [departments] = await pool.query<RowDataPacket[]>(
       `
         SELECT d.id, d.name
         FROM departments d
@@ -43,7 +45,7 @@ export async function getMyProfile(req, res) {
     );
 
     // assets assigned to me
-    const [assignedAssets] = await pool.query(
+    const [assignedAssets] = await pool.query<RowDataPacket[]>(
       `
         SELECT id, asset_tag, name, status, \`condition\`
         FROM assets
@@ -67,7 +69,7 @@ export async function getMyProfile(req, res) {
 // Supports optional search via ?search=something in the URL
 // Also supports filtering by department via ?department_id=3
 
-export async function getAllEmployees(req, res) {
+export async function getAllEmployees(req: Request, res: Response) {
   try {
     const search = req.query.search;
     const departmentId = req.query.department_id;
@@ -102,21 +104,21 @@ export async function getAllEmployees(req, res) {
 
     sqlQuery += " ORDER BY u.full_name ASC";
 
-    const [employees] = await pool.query(sqlQuery, queryValues);
+    const [employees] = await pool.query<RowDataPacket[]>(sqlQuery, queryValues);
 
     // for each employee, also grab which department(s) they belong to.
     // We do this as a separate loop rather than one giant JOIN query
     for (let i = 0; i < employees.length; i++) {
-      const [departments] = await pool.query(
+      const [departments] = await pool.query<RowDataPacket[]>(
         `
             SELECT d.id, d.name
             FROM departments d
             JOIN employee_departments ed ON d.id = ed.department_id
             WHERE ed.employee_id = ?
             `,
-        [employees[i].id],
+        [employees[i]!.id],
       );
-      employees[i].departments = departments;
+      employees[i]!.departments = departments;
     }
     return res.json(employees);
   } catch (err) {
@@ -127,11 +129,11 @@ export async function getAllEmployees(req, res) {
 
 /////////////// get employee details
 
-export async function getEmployeeById(req, res) {
+export async function getEmployeeById(req: Request, res: Response) {
   try {
     const employeeId = req.params.id;
 
-    const [users] = await pool.query(
+    const [users] = await pool.query<RowDataPacket[]>(
       `
         SELECT id, full_name, email, role, is_active, created_at, updated_at
         FROM users
@@ -144,9 +146,9 @@ export async function getEmployeeById(req, res) {
       return res.status(404).json({ message: "Employee not found" });
     }
 
-    const employee = users[0];
+    const employee = users[0]!;
 
-    const [departments] = await pool.query(
+    const [departments] = await pool.query<RowDataPacket[]>(
       `
         SELECT d.id, d.name
         FROM departments d
@@ -157,7 +159,7 @@ export async function getEmployeeById(req, res) {
 
     //get the assets currently assigned to them
 
-    const [assignedAssets] = await pool.query(
+    const [assignedAssets] = await pool.query<RowDataPacket[]>(
       `
         SELECT id, asset_tag, name, status, \`condition\`
         FROM assets
@@ -177,9 +179,9 @@ export async function getEmployeeById(req, res) {
 /////////////////////
 // PROFILE UPDATION
 ///////////////////////
-export async function updateMyProfile(req, res) {
+export async function updateMyProfile(req: Request, res: Response) {
   try {
-    const myId = req.user.id;
+    const myId = req.user!.id;
     const fullName = req.body.full_name;
     if (!fullName) {
       return res.status(400).json({ message: "full_name is required" });
@@ -200,7 +202,7 @@ export async function updateMyProfile(req, res) {
 
 // UPDATE AN EMPLOYEE'S PROFILE
 // This handles: changing name, and reassigning departments
-export async function updateEmployee(req, res) {
+export async function updateEmployee(req: Request, res: Response) {
   const connection = await pool.getConnection();
   try {
     const employeeId = req.params.id;
@@ -208,7 +210,7 @@ export async function updateEmployee(req, res) {
     const departmentIds = req.body.department_ids; // expects an array, e.g. [1, 3]
 
     // check if it exists
-    const [existingUsers] = await connection.query(
+    const [existingUsers] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM users WHERE id = ? AND role = ?",
       [employeeId, "employee"],
     );
@@ -217,7 +219,7 @@ export async function updateEmployee(req, res) {
       return res.status(404).json({ message: "Employee not found" });
     }
 
-    const currentEmployee = existingUsers[0];
+    const currentEmployee = existingUsers[0]!;
 
     const newFullName =
       fullName !== undefined ? fullName : currentEmployee.full_name;
@@ -237,7 +239,7 @@ export async function updateEmployee(req, res) {
 
     if (departmentIds !== undefined) {
       if (departmentIds.length > 0) {
-        const [validDepartments] = await connection.query(
+        const [validDepartments] = await connection.query<RowDataPacket[]>(
           "SELECT id FROM departments WHERE id IN (?)",
           [departmentIds],
         );
@@ -276,7 +278,7 @@ export async function updateEmployee(req, res) {
 
 // ACTIVATE OR DEACTIVATE AN EMPLOYEE
 
-export async function setEmployeeActiveStatus(req, res) {
+export async function setEmployeeActiveStatus(req: Request, res: Response) {
   try {
     const employeeId = req.params.id;
     const isActive = req.body.is_active; // expects true or false
@@ -287,7 +289,7 @@ export async function setEmployeeActiveStatus(req, res) {
         .json({ message: "is_active (true or false) is required" });
     }
 
-    const [existingUsers] = await pool.query(
+    const [existingUsers] = await pool.query<RowDataPacket[]>(
       "SELECT id FROM users WHERE id = ? AND role = ?",
       [employeeId, "employee"],
     );
