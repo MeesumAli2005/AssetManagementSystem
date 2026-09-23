@@ -1,13 +1,16 @@
 // request workflow - create, review, assign, return/repair completion, notes
+import type { Request, Response } from "express";
+import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import pool from "../config/db.js";
 import { recordAssignmentEvent } from "./assetController.js";
+import { getErrorMessage } from "../utils/errors.js";
 
 const REQUEST_TYPES = ["asset", "return", "repair"];
 
 // repair_details is the admin's private diagnosis/plan note, set when
 // approving a repair — never shown to the employee. Strip it before any
 // response an employee can read; admin-facing endpoints keep it as-is.
-function stripPrivateFields(row) {
+function stripPrivateFields(row: RowDataPacket) {
   const { repair_details, ...rest } = row;
   return rest;
 }
@@ -22,10 +25,10 @@ function stripPrivateFields(row) {
 // - "return" / "repair": needs asset_id, and it must be one currently
 //   assigned to the requester — same ownership check used elsewhere
 //   (e.g. getMyAssignedAssets).
-export async function createRequest(req, res) {
+export async function createRequest(req: Request, res: Response) {
   try {
     const { request_type, category_id, asset_id, reason } = req.body;
-    const myId = req.user.id;
+    const myId = req.user!.id;
 
     if (!REQUEST_TYPES.includes(request_type)) {
       return res.status(400).json({
@@ -44,7 +47,7 @@ export async function createRequest(req, res) {
           .json({ message: "category_id is required for an asset request" });
       }
 
-      const [categoryRows] = await pool.query(
+      const [categoryRows] = await pool.query<RowDataPacket[]>(
         "SELECT id FROM categories WHERE id = ?",
         [category_id],
       );
@@ -54,12 +57,13 @@ export async function createRequest(req, res) {
         });
       }
 
-      const [[{ available_count }]] = await pool.query(
+      const [availableCountRows] = await pool.query<RowDataPacket[]>(
         `SELECT COUNT(*) AS available_count FROM assets WHERE category_id = ? AND status = 'available'`,
         [category_id],
       );
+      const { available_count } = availableCountRows[0]!;
 
-      const [result] = await pool.query(
+      const [result] = await pool.query<ResultSetHeader>(
         `INSERT INTO requests (request_type, employee_id, category_id, reason, status)
                 VALUES ('asset', ?, ?, ?, 'pending')`,
         [myId, category_id, reason],
@@ -79,7 +83,7 @@ export async function createRequest(req, res) {
       });
     }
 
-    const [assetRows] = await pool.query(
+    const [assetRows] = await pool.query<RowDataPacket[]>(
       "SELECT id, current_assignee_id FROM assets WHERE id = ?",
       [asset_id],
     );
@@ -89,14 +93,14 @@ export async function createRequest(req, res) {
         .json({ message: "asset_id does not refer to an existing asset" });
     }
 
-    if (assetRows[0].current_assignee_id !== myId) {
+    if (assetRows[0]!.current_assignee_id !== myId) {
       return res.status(403).json({
         message:
           "You can only request a return or repair for an asset assigned to you",
       });
     }
 
-    const [result] = await pool.query(
+    const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO requests (request_type, employee_id, asset_id, reason, status)
             VALUES (?, ?, ?, ?, 'pending')`,
       [request_type, myId, asset_id, reason],
@@ -114,9 +118,9 @@ export async function createRequest(req, res) {
 // ================================================================
 // MY REQUESTS (employee self-service — status tracking)
 // ================================================================
-export async function getMyRequests(req, res) {
+export async function getMyRequests(req: Request, res: Response) {
   try {
-    const [rows] = await pool.query(
+    const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT
                 r.*,
                 c.name AS category_name,
@@ -132,7 +136,7 @@ export async function getMyRequests(req, res) {
 
             WHERE r.employee_id = ?
             ORDER BY r.created_at DESC`,
-      [req.user.id],
+      [req.user!.id],
     );
 
     return res.json(rows.map(stripPrivateFields));
@@ -157,7 +161,7 @@ export async function getMyRequests(req, res) {
 // the admin's point of view they still belong in the pending pile. The
 // "approved" and "sent_for_repair" filter buttons still exist separately
 // for anyone who wants just those.
-export async function getAllRequests(req, res) {
+export async function getAllRequests(req: Request, res: Response) {
   try {
     const { status, search } = req.query;
     const values = [];
@@ -183,7 +187,7 @@ export async function getAllRequests(req, res) {
     const whereClause =
       conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-    const [rows] = await pool.query(
+    const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT
                 r.*,
                 e.full_name AS employee_name,
@@ -214,11 +218,11 @@ export async function getAllRequests(req, res) {
 // ================================================================
 // REQUEST DETAIL (admin) — everything about a single request
 // ================================================================
-export async function getRequestById(req, res) {
+export async function getRequestById(req: Request, res: Response) {
   try {
     const { id } = req.params;
 
-    const [rows] = await pool.query(
+    const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT
                 r.*,
                 e.full_name AS employee_name,
@@ -250,17 +254,17 @@ export async function getRequestById(req, res) {
     }
 
     if (
-      req.user.role !== "administrator" &&
-      rows[0].employee_id !== req.user.id
+      req.user!.role !== "administrator" &&
+      rows[0]!.employee_id !== req.user!.id
     ) {
       return res.status(403).json({ message: "This is not your request" });
     }
 
-    if (req.user.role !== "administrator") {
-      return res.json(stripPrivateFields(rows[0]));
+    if (req.user!.role !== "administrator") {
+      return res.json(stripPrivateFields(rows[0]!));
     }
 
-    const [notes] = await pool.query(
+    const [notes] = await pool.query<RowDataPacket[]>(
       `SELECT n.id, n.note, n.status_at_time, n.created_at, u.full_name AS admin_name
             FROM request_notes n
             JOIN users u ON n.admin_id = u.id
@@ -284,7 +288,7 @@ export async function getRequestById(req, res) {
 // — pending, approved, rejected, completed, sent_for_repair. Each note
 // records who wrote it and what the status was at that moment, and is never
 // shown to the employee.
-export async function addRequestNote(req, res) {
+export async function addRequestNote(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const { note } = req.body;
@@ -293,7 +297,7 @@ export async function addRequestNote(req, res) {
       return res.status(400).json({ message: "note is required" });
     }
 
-    const [rows] = await pool.query(
+    const [rows] = await pool.query<RowDataPacket[]>(
       "SELECT status FROM requests WHERE id = ?",
       [id],
     );
@@ -301,10 +305,10 @@ export async function addRequestNote(req, res) {
       return res.status(404).json({ message: "Request not found" });
     }
 
-    const [result] = await pool.query(
+    const [result] = await pool.query<ResultSetHeader>(
       `INSERT INTO request_notes (request_id, admin_id, note, status_at_time)
             VALUES (?, ?, ?, ?)`,
-      [id, req.user.id, note.trim(), rows[0].status],
+      [id, req.user!.id, note.trim(), rows[0]!.status],
     );
 
     return res.status(201).json({ id: result.insertId, message: "Note added" });
@@ -339,7 +343,7 @@ export async function addRequestNote(req, res) {
 //     generic "approved" state — there's nothing left to decide, the asset
 //     is now literally sent for repair). A separate call to completeRepair
 //     closes it out once the repair is done.
-export async function reviewRequest(req, res) {
+export async function reviewRequest(req: Request, res: Response) {
   const connection = await pool.getConnection();
   try {
     const { id } = req.params;
@@ -351,14 +355,14 @@ export async function reviewRequest(req, res) {
         .json({ message: 'status must be "approved" or "rejected"' });
     }
 
-    const [rows] = await connection.query(
+    const [rows] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM requests WHERE id = ?",
       [id],
     );
     if (rows.length === 0) {
       return res.status(404).json({ message: "Request not found" });
     }
-    const request = rows[0];
+    const request = rows[0]!;
 
     if (request.status !== "pending") {
       return res
@@ -371,7 +375,7 @@ export async function reviewRequest(req, res) {
     if (status === "rejected") {
       await connection.query(
         "UPDATE requests SET status = ?, reviewed_by = ?, reviewed_at = NOW(), review_notes = ? WHERE id = ?",
-        ["rejected", req.user.id, review_notes || null, id],
+        ["rejected", req.user!.id, review_notes || null, id],
       );
       await connection.commit();
       return res.json({ message: "Request rejected" });
@@ -380,7 +384,7 @@ export async function reviewRequest(req, res) {
     if (request.request_type === "asset") {
       await connection.query(
         "UPDATE requests SET status = ?, reviewed_by = ?, reviewed_at = NOW(), review_notes = ? WHERE id = ?",
-        ["approved", req.user.id, review_notes || null, id],
+        ["approved", req.user!.id, review_notes || null, id],
       );
       await connection.commit();
       return res.json({
@@ -389,7 +393,7 @@ export async function reviewRequest(req, res) {
     }
 
     // return / repair — act on the already-known asset now
-    const [assetRows] = await connection.query(
+    const [assetRows] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM assets WHERE id = ?",
       [request.asset_id],
     );
@@ -399,7 +403,7 @@ export async function reviewRequest(req, res) {
         .status(404)
         .json({ message: "The asset for this request no longer exists" });
     }
-    const asset = assetRows[0];
+    const asset = assetRows[0]!;
 
     if (asset.current_assignee_id !== request.employee_id) {
       await connection.rollback();
@@ -415,14 +419,14 @@ export async function reviewRequest(req, res) {
       );
       await recordAssignmentEvent(connection, {
         assetId: asset.id,
-        performedBy: req.user.id,
+        performedBy: req.user!.id,
         previousAssigneeId: request.employee_id,
         newAssigneeId: null,
         newAssigneeName: null,
       });
       await connection.query(
         "UPDATE requests SET status = ?, reviewed_by = ?, reviewed_at = NOW(), review_notes = ? WHERE id = ?",
-        ["approved", req.user.id, review_notes || null, id],
+        ["approved", req.user!.id, review_notes || null, id],
       );
       await connection.commit();
       return res.json({
@@ -440,7 +444,7 @@ export async function reviewRequest(req, res) {
       `INSERT INTO asset_history (performed_by, event_type, description, asset_id)
             VALUES (?, 'repair', ?, ?)`,
       [
-        req.user.id,
+        req.user!.id,
         repair_details
           ? `Repair approved — sent for repair: ${repair_details}`
           : `Repair approved via request #${id} — sent for repair`,
@@ -451,7 +455,7 @@ export async function reviewRequest(req, res) {
       "UPDATE requests SET status = ?, reviewed_by = ?, reviewed_at = NOW(), repair_details = ?, review_notes = ? WHERE id = ?",
       [
         "sent_for_repair",
-        req.user.id,
+        req.user!.id,
         repair_details || null,
         review_notes || null,
         id,
@@ -464,7 +468,7 @@ export async function reviewRequest(req, res) {
     console.error(err);
     return res
       .status(400)
-      .json({ message: err.message || "Server error reviewing request" });
+      .json({ message: getErrorMessage(err, "Server error reviewing request") });
   } finally {
     connection.release();
   }
@@ -476,7 +480,7 @@ export async function reviewRequest(req, res) {
 // Only meaningful for "asset"-type requests that have already been
 // approved. The admin picks a specific available asset — it must belong to
 // the category the request asked for.
-export async function assignAssetToRequest(req, res) {
+export async function assignAssetToRequest(req: Request, res: Response) {
   const connection = await pool.getConnection();
   try {
     const { id } = req.params;
@@ -486,14 +490,14 @@ export async function assignAssetToRequest(req, res) {
       return res.status(400).json({ message: "asset_id is required" });
     }
 
-    const [requestRows] = await connection.query(
+    const [requestRows] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM requests WHERE id = ?",
       [id],
     );
     if (requestRows.length === 0) {
       return res.status(404).json({ message: "Request not found" });
     }
-    const request = requestRows[0];
+    const request = requestRows[0]!;
 
     if (request.request_type !== "asset") {
       return res.status(400).json({
@@ -508,7 +512,7 @@ export async function assignAssetToRequest(req, res) {
       });
     }
 
-    const [assetRows] = await connection.query(
+    const [assetRows] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM assets WHERE id = ?",
       [asset_id],
     );
@@ -517,7 +521,7 @@ export async function assignAssetToRequest(req, res) {
         .status(400)
         .json({ message: "asset_id does not refer to an existing asset" });
     }
-    const asset = assetRows[0];
+    const asset = assetRows[0]!;
 
     if (asset.status !== "available") {
       return res
@@ -531,7 +535,7 @@ export async function assignAssetToRequest(req, res) {
       });
     }
 
-    const [employeeRows] = await connection.query(
+    const [employeeRows] = await connection.query<RowDataPacket[]>(
       "SELECT full_name FROM users WHERE id = ?",
       [request.employee_id],
     );
@@ -546,7 +550,7 @@ export async function assignAssetToRequest(req, res) {
 
     await recordAssignmentEvent(connection, {
       assetId: asset_id,
-      performedBy: req.user.id,
+      performedBy: req.user!.id,
       previousAssigneeId: null,
       newAssigneeId: request.employee_id,
       newAssigneeName: employeeName,
@@ -554,7 +558,7 @@ export async function assignAssetToRequest(req, res) {
 
     await connection.query(
       "UPDATE requests SET status = ?, resulting_asset_id = ?, completed_at = NOW(), completed_by = ? WHERE id = ?",
-      ["completed", asset_id, req.user.id, id],
+      ["completed", asset_id, req.user!.id, id],
     );
 
     await connection.commit();
@@ -565,7 +569,10 @@ export async function assignAssetToRequest(req, res) {
     await connection.rollback();
     console.error(err);
     return res.status(400).json({
-      message: err.message || "Server error assigning asset to request",
+      message: getErrorMessage(
+        err,
+        "Server error assigning asset to request",
+      ),
     });
   } finally {
     connection.release();
@@ -578,20 +585,20 @@ export async function assignAssetToRequest(req, res) {
 // The asset was already pulled out of the employee's registry at approval
 // time; this just closes the request out once it's actually back in hand.
 // The employee still needs to acknowledge it via acknowledgeReturn.
-export async function completeReturn(req, res) {
+export async function completeReturn(req: Request, res: Response) {
   const connection = await pool.getConnection();
   try {
     const { id } = req.params;
     const { notes } = req.body;
 
-    const [rows] = await connection.query(
+    const [rows] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM requests WHERE id = ?",
       [id],
     );
     if (rows.length === 0) {
       return res.status(404).json({ message: "Request not found" });
     }
-    const request = rows[0];
+    const request = rows[0]!;
 
     if (request.request_type !== "return") {
       return res.status(400).json({
@@ -609,14 +616,14 @@ export async function completeReturn(req, res) {
 
     await connection.query(
       "UPDATE requests SET status = ?, completion_notes = ?, completed_at = NOW(), completed_by = ? WHERE id = ?",
-      ["completed", notes || null, req.user.id, id],
+      ["completed", notes || null, req.user!.id, id],
     );
 
     if (notes) {
       await connection.query(
         `INSERT INTO asset_history (performed_by, event_type, description, asset_id)
                 VALUES (?, 'return', ?, ?)`,
-        [req.user.id, `Return marked complete: ${notes}`, request.asset_id],
+        [req.user!.id, `Return marked complete: ${notes}`, request.asset_id],
       );
     }
 
@@ -630,7 +637,7 @@ export async function completeReturn(req, res) {
     console.error(err);
     return res
       .status(400)
-      .json({ message: err.message || "Server error completing return" });
+      .json({ message: getErrorMessage(err, "Server error completing return") });
   } finally {
     connection.release();
   }
@@ -643,20 +650,20 @@ export async function completeReturn(req, res) {
 // asset_assignments record to hook this into (unlike acknowledging receipt
 // of something) since the employee no longer holds anything, so this is
 // tracked directly on the request itself via requests.acknowledged_at.
-export async function acknowledgeReturn(req, res) {
+export async function acknowledgeReturn(req: Request, res: Response) {
   const connection = await pool.getConnection();
   try {
     const { id } = req.params;
-    const myId = req.user.id;
+    const myId = req.user!.id;
 
-    const [rows] = await connection.query(
+    const [rows] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM requests WHERE id = ?",
       [id],
     );
     if (rows.length === 0) {
       return res.status(404).json({ message: "Request not found" });
     }
-    const request = rows[0];
+    const request = rows[0]!;
 
     if (request.employee_id !== myId) {
       return res.status(403).json({ message: "This is not your request" });
@@ -689,9 +696,9 @@ export async function acknowledgeReturn(req, res) {
   } catch (err) {
     await connection.rollback();
     console.error(err);
-    return res
-      .status(400)
-      .json({ message: err.message || "Server error acknowledging return" });
+    return res.status(400).json({
+      message: getErrorMessage(err, "Server error acknowledging return"),
+    });
   } finally {
     connection.release();
   }
@@ -705,20 +712,20 @@ export async function acknowledgeReturn(req, res) {
 // and reopens a fresh, unacknowledged assignment record via
 // recordAssignmentEvent — the same mechanism used everywhere else an
 // employee needs to confirm receipt.
-export async function completeRepair(req, res) {
+export async function completeRepair(req: Request, res: Response) {
   const connection = await pool.getConnection();
   try {
     const { id } = req.params;
     const { repair_notes } = req.body;
 
-    const [rows] = await connection.query(
+    const [rows] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM requests WHERE id = ?",
       [id],
     );
     if (rows.length === 0) {
       return res.status(404).json({ message: "Request not found" });
     }
-    const request = rows[0];
+    const request = rows[0]!;
 
     if (request.request_type !== "repair") {
       return res.status(400).json({
@@ -732,7 +739,7 @@ export async function completeRepair(req, res) {
       });
     }
 
-    const [assetRows] = await connection.query(
+    const [assetRows] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM assets WHERE id = ?",
       [request.asset_id],
     );
@@ -741,9 +748,9 @@ export async function completeRepair(req, res) {
         .status(404)
         .json({ message: "The asset for this request no longer exists" });
     }
-    const asset = assetRows[0];
+    const asset = assetRows[0]!;
 
-    const [employeeRows] = await connection.query(
+    const [employeeRows] = await connection.query<RowDataPacket[]>(
       "SELECT full_name FROM users WHERE id = ?",
       [request.employee_id],
     );
@@ -758,7 +765,7 @@ export async function completeRepair(req, res) {
 
     await recordAssignmentEvent(connection, {
       assetId: asset.id,
-      performedBy: req.user.id,
+      performedBy: req.user!.id,
       previousAssigneeId: request.employee_id,
       newAssigneeId: request.employee_id,
       newAssigneeName: employeeName,
@@ -768,7 +775,7 @@ export async function completeRepair(req, res) {
       `INSERT INTO asset_history (performed_by, event_type, description, asset_id)
             VALUES (?, 'repair', ?, ?)`,
       [
-        req.user.id,
+        req.user!.id,
         repair_notes
           ? `Repair completed: ${repair_notes}`
           : "Repair completed, returned to employee",
@@ -778,7 +785,7 @@ export async function completeRepair(req, res) {
 
     await connection.query(
       "UPDATE requests SET status = ?, completion_notes = ?, completed_at = NOW(), completed_by = ? WHERE id = ?",
-      ["completed", repair_notes || null, req.user.id, id],
+      ["completed", repair_notes || null, req.user!.id, id],
     );
 
     await connection.commit();
@@ -790,7 +797,7 @@ export async function completeRepair(req, res) {
     console.error(err);
     return res
       .status(400)
-      .json({ message: err.message || "Server error completing repair" });
+      .json({ message: getErrorMessage(err, "Server error completing repair") });
   } finally {
     connection.release();
   }
