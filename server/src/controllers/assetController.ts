@@ -1,5 +1,8 @@
 // the big one - asset crud, specs, retire/dispose, assignment history, acks, stats
+import type { Request, Response } from "express";
+import type { PoolConnection, RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import pool from "../config/db.js";
+import { getErrorMessage } from "../utils/errors.js";
 
 //valid statuses for a given asset
 
@@ -9,15 +12,20 @@ export const VALID_CONDITIONS = ["new", "good", "fair", "damaged"];
 
 const VALID_USAGE_STATES = ["active", "dormant"];
 
+interface SpecValueInput {
+  category_spec_id: number;
+  value: unknown;
+}
+
 //Linker function to help route the 3 tables (categories, -> category_specs,-> asset_spec_values) linked together
 
 async function validateAndWriteSpecValues(
-  connection,
-  assetId,
-  categoryId,
-  specValues,
+  connection: PoolConnection,
+  assetId: number | string,
+  categoryId: number | string,
+  specValues: SpecValueInput[] | undefined,
 ) {
-  const [categorySpecs] = await connection.query(
+  const [categorySpecs] = await connection.query<RowDataPacket[]>(
     "SELECT id, spec_name, is_required FROM category_specs WHERE category_id = ?",
     [categoryId],
   );
@@ -55,6 +63,14 @@ async function validateAndWriteSpecValues(
   }
 }
 
+interface AssignmentEvent {
+  assetId: number | string;
+  performedBy: number;
+  previousAssigneeId: number | string | null;
+  newAssigneeId: number | string | null;
+  newAssigneeName: string | null;
+}
+
 // Writes an assignment event: the asset_history entry plus the
 // asset_assignments record (close out the previous holder, open a fresh
 // unacknowledged record for the new one). This is what the employee's
@@ -64,8 +80,14 @@ async function validateAndWriteSpecValues(
 // (fulfilling an approved request), so there's one place that knows how an
 // assignment gets recorded instead of two.
 export async function recordAssignmentEvent(
-  connection,
-  { assetId, performedBy, previousAssigneeId, newAssigneeId, newAssigneeName },
+  connection: PoolConnection,
+  {
+    assetId,
+    performedBy,
+    previousAssigneeId,
+    newAssigneeId,
+    newAssigneeName,
+  }: AssignmentEvent,
 ) {
   const description =
     newAssigneeId === null
@@ -96,7 +118,7 @@ export async function recordAssignmentEvent(
 }
 
 //asset creation part
-export async function createAsset(req, res) {
+export async function createAsset(req: Request, res: Response) {
   const connection = await pool.getConnection();
   try {
     const {
@@ -124,7 +146,7 @@ export async function createAsset(req, res) {
 
     await connection.beginTransaction();
 
-    const [categoryRows] = await connection.query(
+    const [categoryRows] = await connection.query<RowDataPacket[]>(
       "SELECT name FROM categories WHERE id = ?",
       [category_id],
     );
@@ -134,13 +156,13 @@ export async function createAsset(req, res) {
         message: "category_id does not refer to an existing category",
       });
     }
-    const categoryName = categoryRows[0].name;
+    const categoryName = categoryRows[0]!.name;
 
     // asset_tag/name both depend on the row's own auto-increment id, which
     // doesn't exist until after the INSERT — write placeholders (can't be
     // NULL, both columns are NOT NULL) then immediately patch the same row
     // before commit. No other connection ever observes the placeholder.
-    const [result] = await connection.query(
+    const [result] = await connection.query<ResultSetHeader>(
       `INSERT INTO assets
         (asset_tag, name, brand, category_id, purchase_date, purchase_cost, status, \`condition\`, current_assignee_id)
         VALUES ('PENDING', 'PENDING', ?, ?, ?, ?, 'available', ?, NULL)`,
@@ -173,7 +195,7 @@ export async function createAsset(req, res) {
     await connection.query(
       `INSERT INTO asset_history (performed_by, event_type, description, asset_id)
         VALUES (?, 'purchase', ?, ?)`,
-      [req.user.id, `Asset "${name}" added to inventory`, assetId],
+      [req.user!.id, `Asset "${name}" added to inventory`, assetId],
     );
 
     await connection.commit();
@@ -183,7 +205,7 @@ export async function createAsset(req, res) {
     console.error(err);
     return res
       .status(400)
-      .json({ message: err.message || "Server error creating asset" });
+      .json({ message: getErrorMessage(err, "Server error creating asset") });
   } finally {
     connection.release();
   }
@@ -200,7 +222,7 @@ export async function createAsset(req, res) {
 // // GET /api/assets?status=available&category_id=2 //
 // ================================================================
 
-export async function getAllAssets(req, res) {
+export async function getAllAssets(req: Request, res: Response) {
   try {
     const search = req.query.search;
     const category_id = req.query.category_id;
@@ -212,8 +234,8 @@ export async function getAllAssets(req, res) {
 
     // req.query values are always strings, so a bad/missing page/limit
     // just falls back to a sane default instead of crashing.
-    const page = Math.max(parseInt(req.query.page) || 1, 1);
-    const limit = Math.max(parseInt(req.query.limit) || 10, 1);
+    const page = Math.max(parseInt(String(req.query.page)) || 1, 1);
+    const limit = Math.max(parseInt(String(req.query.limit)) || 10, 1);
     const offset = (page - 1) * limit;
 
     const conditions = [];
@@ -279,13 +301,13 @@ export async function getAllAssets(req, res) {
     // Same WHERE clause, no LIMIT — this is what "page 3 of 7" is
     // computed from, so it has to count the full filtered set, not
     // just the 10 rows we're about to return.
-    const [countRows] = await pool.query(
+    const [countRows] = await pool.query<RowDataPacket[]>(
       `SELECT COUNT(*) AS total FROM assets a ${whereClause}`,
       values,
     );
-    const total = countRows[0].total;
+    const total = countRows[0]!.total;
 
-    const [assets] = await pool.query(
+    const [assets] = await pool.query<RowDataPacket[]>(
       `SELECT
                 a.*,
                 c.name AS category_name,
@@ -332,14 +354,14 @@ export async function getAllAssets(req, res) {
 // 3. Asset docs
 // ================================================================
 
-export async function getAssetById(req, res) {
+export async function getAssetById(req: Request, res: Response) {
   try {
     // id comes from the url
     ///
 
     const id = req.params.id;
 
-    const assetResult = await pool.query(
+    const assetResult = await pool.query<RowDataPacket[]>(
       `SELECT
                 a.*,
                 c.name AS category_name,
@@ -365,22 +387,23 @@ export async function getAssetById(req, res) {
       });
     }
 
-    const asset = assetRows[0];
+    const asset = assetRows[0]!;
 
     // Admins can view any asset. Employees can only view one they
     // currently or previously had assigned to them — otherwise this
     // endpoint would leak every other employee's assignment history and
     // purchase cost. asset_assignments (any row, active or not) is the
     // source of truth for "had this asset at some point".
-    if (req.user.role !== "administrator") {
-      const [assignmentRows] = await pool.query(
+    if (req.user!.role !== "administrator") {
+      const [assignmentRows] = await pool.query<RowDataPacket[]>(
         `SELECT id AS assignment_id, acknowledged_at, assigned_at, is_active
                 FROM asset_assignments WHERE asset_id = ? AND employee_id = ? ORDER BY assigned_at DESC`,
-        [id, req.user.id],
+        [id, req.user!.id],
       );
 
       const hasAccess =
-        assignmentRows.length > 0 || asset.current_assignee_id === req.user.id;
+        assignmentRows.length > 0 ||
+        asset.current_assignee_id === req.user!.id;
       if (!hasAccess) {
         return res
           .status(403)
@@ -402,8 +425,8 @@ export async function getAssetById(req, res) {
     // those [assigned_at, returned_at-or-now) windows. Not the full
     // audit trail — just "what happened while I had it".
     let history;
-    if (req.user.role === "administrator") {
-      const historyResult = await pool.query(
+    if (req.user!.role === "administrator") {
+      const historyResult = await pool.query<RowDataPacket[]>(
         `SELECT
                     h.*,
                     u.full_name AS performed_by_name
@@ -421,7 +444,7 @@ export async function getAssetById(req, res) {
 
       history = historyResult[0];
     } else {
-      const historyResult = await pool.query(
+      const historyResult = await pool.query<RowDataPacket[]>(
         `SELECT DISTINCT
                     h.*,
                     u.full_name AS performed_by_name
@@ -439,14 +462,14 @@ export async function getAssetById(req, res) {
                 WHERE h.asset_id = ?
 
                 ORDER BY h.created_at DESC`,
-        [req.user.id, id],
+        [req.user!.id, id],
       );
 
       history = historyResult[0];
     }
 
     //asset docs
-    const [documents] = await pool.query(
+    const [documents] = await pool.query<RowDataPacket[]>(
       `SELECT d.*, u.full_name AS uploaded_by_name
         FROM asset_documents d
         LEFT JOIN users u ON d.uploaded_by = u.id
@@ -455,7 +478,7 @@ export async function getAssetById(req, res) {
       [id],
     );
 
-    const [specValues] = await pool.query(
+    const [specValues] = await pool.query<RowDataPacket[]>(
       `SELECT sv.id, sv.category_spec_id, sv.value, cs.spec_name, cs.spec_type
         FROM asset_spec_values sv
         JOIN category_specs cs ON sv.category_spec_id = cs.id
@@ -479,7 +502,7 @@ export async function getAssetById(req, res) {
 }
 
 //asset updation
-export async function updateAsset(req, res) {
+export async function updateAsset(req: Request, res: Response) {
   const connection = await pool.getConnection();
   try {
     const { id } = req.params;
@@ -495,7 +518,7 @@ export async function updateAsset(req, res) {
       assignee_id,
     } = req.body;
 
-    const [existingRows] = await connection.query(
+    const [existingRows] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM assets WHERE id = ?",
       [id],
     );
@@ -503,7 +526,7 @@ export async function updateAsset(req, res) {
     if (existingRows.length === 0) {
       return res.status(404).json({ message: "Asset not found" });
     }
-    const existing = existingRows[0];
+    const existing = existingRows[0]!;
 
     if (status && !VALID_STATUSES.includes(status)) {
       return res.status(400).json({
@@ -540,7 +563,7 @@ export async function updateAsset(req, res) {
       if (assignee_id === null) {
         finalAssigneeId = null;
       } else {
-        const [assigneeRows] = await connection.query(
+        const [assigneeRows] = await connection.query<RowDataPacket[]>(
           "SELECT id, full_name FROM users WHERE id = ?",
           [assignee_id],
         );
@@ -550,7 +573,7 @@ export async function updateAsset(req, res) {
           });
         }
         finalAssigneeId = assignee_id;
-        assigneeName = assigneeRows[0].full_name;
+        assigneeName = assigneeRows[0]!.full_name;
       }
     }
 
@@ -608,14 +631,14 @@ export async function updateAsset(req, res) {
       brand !== undefined ||
       (category_id !== undefined && finalCategoryId !== existing.category_id)
     ) {
-      const [categoryRows] = await connection.query(
+      const [categoryRows] = await connection.query<RowDataPacket[]>(
         "SELECT name FROM categories WHERE id = ?",
         [finalCategoryId],
       );
       if (categoryRows.length === 0) {
         throw new Error("category_id does not refer to an existing category");
       }
-      finalName = `${finalBrand} ${categoryRows[0].name} #${id}`;
+      finalName = `${finalBrand} ${categoryRows[0]!.name} #${id}`;
     }
 
     await connection.beginTransaction();
@@ -647,7 +670,7 @@ export async function updateAsset(req, res) {
 
       await validateAndWriteSpecValues(
         connection,
-        id,
+        String(id),
         finalCategoryId,
         spec_values,
       );
@@ -663,7 +686,7 @@ export async function updateAsset(req, res) {
         `INSERT INTO asset_history (performed_by, event_type, description, asset_id)
             VALUES (?, 'status_change', ?, ?)`,
         [
-          req.user.id,
+          req.user!.id,
           `Status changed from "${existing.status}" to "${finalStatus}"`,
           id,
         ],
@@ -675,7 +698,7 @@ export async function updateAsset(req, res) {
         `INSERT INTO asset_history (performed_by, event_type, description, asset_id)
                 VALUES (?, 'condition_change', ?, ?)`,
         [
-          req.user.id,
+          req.user!.id,
           `Condition changed from "${existing.condition}" to "${condition}"`,
           id,
         ],
@@ -687,8 +710,8 @@ export async function updateAsset(req, res) {
       finalAssigneeId !== existing.current_assignee_id
     ) {
       await recordAssignmentEvent(connection, {
-        assetId: id,
-        performedBy: req.user.id,
+        assetId: String(id),
+        performedBy: req.user!.id,
         previousAssigneeId: existing.current_assignee_id,
         newAssigneeId: finalAssigneeId,
         newAssigneeName: assigneeName,
@@ -702,7 +725,7 @@ export async function updateAsset(req, res) {
     console.error(err);
     return res
       .status(400)
-      .json({ message: err.message || "Server error updating asset" });
+      .json({ message: getErrorMessage(err, "Server error updating asset") });
   } finally {
     connection.release();
   }
@@ -712,7 +735,7 @@ export async function updateAsset(req, res) {
 // RETIRE ASSET
 // ================================================================
 // no deletion, cuz we want its history
-export async function retireAsset(req, res) {
+export async function retireAsset(req: Request, res: Response) {
   const connection = await pool.getConnection();
 
   try {
@@ -723,9 +746,10 @@ export async function retireAsset(req, res) {
     // CHECK THAT ASSET EXISTS
     // ------------------------------------------------------------
 
-    const result = await connection.query("SELECT * FROM assets WHERE id = ?", [
-      id,
-    ]);
+    const result = await connection.query<RowDataPacket[]>(
+      "SELECT * FROM assets WHERE id = ?",
+      [id],
+    );
 
     const existingAssets = result[0];
 
@@ -770,7 +794,7 @@ export async function retireAsset(req, res) {
                 asset_id
             )
             VALUES (?, 'retirement', ?, ?)`,
-      [req.user.id, retirementReason, id],
+      [req.user!.id, retirementReason, id],
     );
 
     await connection.commit();
@@ -797,14 +821,14 @@ export async function retireAsset(req, res) {
 // around; disposed means physically gone for good. Same row, no separate
 // table — just a terminal status plus disposed_at, same pattern as
 // retireAsset above.
-export async function disposeAsset(req, res) {
+export async function disposeAsset(req: Request, res: Response) {
   const connection = await pool.getConnection();
 
   try {
     const id = req.params.id;
     const reason = req.body.reason;
 
-    const [existingAssets] = await connection.query(
+    const [existingAssets] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM assets WHERE id = ?",
       [id],
     );
@@ -835,7 +859,7 @@ export async function disposeAsset(req, res) {
                 asset_id
             )
             VALUES (?, 'disposal', ?, ?)`,
-      [req.user.id, disposalReason, id],
+      [req.user!.id, disposalReason, id],
     );
 
     await connection.commit();
@@ -861,11 +885,11 @@ export async function disposeAsset(req, res) {
 // Everything currently assigned to the logged-in user, plus a bucketed
 // summary. "under_repair" always wins the bucket over usage_state — an
 // asset being repaired isn't meaningfully "active" or "dormant" right now.
-export async function getMyAssignedAssets(req, res) {
+export async function getMyAssignedAssets(req: Request, res: Response) {
   try {
-    const myId = req.user.id;
+    const myId = req.user!.id;
 
-    const [assets] = await pool.query(
+    const [assets] = await pool.query<RowDataPacket[]>(
       `SELECT
                 a.id, a.asset_tag, a.name, a.status, a.condition, a.usage_state,
                 c.name AS category_name,
@@ -905,11 +929,11 @@ export async function getMyAssignedAssets(req, res) {
 // ================================================================
 // Assignments made to the logged-in user that they haven't acknowledged
 // receipt of yet.
-export async function getPendingAcknowledgements(req, res) {
+export async function getPendingAcknowledgements(req: Request, res: Response) {
   try {
-    const myId = req.user.id;
+    const myId = req.user!.id;
 
-    const [rows] = await pool.query(
+    const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT
                 aa.id AS assignment_id, aa.assigned_at,
                 a.id AS asset_id, a.asset_tag, a.name, a.condition,
@@ -948,11 +972,11 @@ export async function getPendingAcknowledgements(req, res) {
 // this is the "click one to see its details" list, as opposed to
 // getPendingAcknowledgements above which is only the ones still needing
 // action.
-export async function getMyAcknowledgements(req, res) {
+export async function getMyAcknowledgements(req: Request, res: Response) {
   try {
-    const myId = req.user.id;
+    const myId = req.user!.id;
 
-    const [rows] = await pool.query(
+    const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT
                 aa.id AS assignment_id, aa.assigned_at, aa.acknowledged_at, aa.returned_at, aa.is_active,
                 a.id AS asset_id, a.asset_tag, a.name, a.condition,
@@ -987,12 +1011,12 @@ export async function getMyAcknowledgements(req, res) {
 // ================================================================
 // ACKNOWLEDGEMENT DETAIL (employee self-service — a single assignment event)
 // ================================================================
-export async function getAcknowledgementById(req, res) {
+export async function getAcknowledgementById(req: Request, res: Response) {
   try {
     const { id } = req.params; // assignment id
-    const myId = req.user.id;
+    const myId = req.user!.id;
 
-    const [rows] = await pool.query(
+    const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT
                 aa.id AS assignment_id, aa.assigned_at, aa.acknowledged_at, aa.returned_at, aa.is_active, aa.employee_id,
                 a.id AS asset_id, a.asset_tag, a.name, a.condition, a.status AS asset_status,
@@ -1018,7 +1042,7 @@ export async function getAcknowledgementById(req, res) {
       return res.status(404).json({ message: "Acknowledgement not found" });
     }
 
-    if (rows[0].employee_id !== myId) {
+    if (rows[0]!.employee_id !== myId) {
       return res
         .status(403)
         .json({ message: "This is not your acknowledgement" });
@@ -1036,13 +1060,13 @@ export async function getAcknowledgementById(req, res) {
 // ================================================================
 // ACKNOWLEDGE ASSIGNMENT (employee self-service)
 // ================================================================
-export async function acknowledgeAssignment(req, res) {
+export async function acknowledgeAssignment(req: Request, res: Response) {
   const connection = await pool.getConnection();
   try {
     const { id } = req.params; // asset id
-    const myId = req.user.id;
+    const myId = req.user!.id;
 
-    const [rows] = await connection.query(
+    const [rows] = await connection.query<RowDataPacket[]>(
       `SELECT * FROM asset_assignments
             WHERE asset_id = ? AND employee_id = ? AND is_active = 1 AND acknowledged_at IS NULL
             ORDER BY assigned_at DESC LIMIT 1`,
@@ -1059,7 +1083,7 @@ export async function acknowledgeAssignment(req, res) {
 
     await connection.query(
       "UPDATE asset_assignments SET acknowledged_at = NOW() WHERE id = ?",
-      [rows[0].id],
+      [rows[0]!.id],
     );
 
     await connection.query(
@@ -1087,12 +1111,12 @@ export async function acknowledgeAssignment(req, res) {
 // Only the current assignee can toggle this, and only while the asset is
 // actually assigned — under_repair/retired/available assets don't have a
 // meaningful active/dormant state.
-export async function setUsageState(req, res) {
+export async function setUsageState(req: Request, res: Response) {
   const connection = await pool.getConnection();
   try {
     const { id } = req.params;
     const { usage_state } = req.body;
-    const myId = req.user.id;
+    const myId = req.user!.id;
 
     if (!VALID_USAGE_STATES.includes(usage_state)) {
       return res.status(400).json({
@@ -1100,13 +1124,14 @@ export async function setUsageState(req, res) {
       });
     }
 
-    const [rows] = await connection.query("SELECT * FROM assets WHERE id = ?", [
-      id,
-    ]);
+    const [rows] = await connection.query<RowDataPacket[]>(
+      "SELECT * FROM assets WHERE id = ?",
+      [id],
+    );
     if (rows.length === 0) {
       return res.status(404).json({ message: "Asset not found" });
     }
-    const asset = rows[0];
+    const asset = rows[0]!;
 
     if (asset.current_assignee_id !== myId) {
       return res.status(403).json({
@@ -1143,9 +1168,9 @@ export async function setUsageState(req, res) {
   } catch (error) {
     await connection.rollback();
     console.error(error);
-    return res
-      .status(400)
-      .json({ message: error.message || "Server error updating usage state" });
+    return res.status(400).json({
+      message: getErrorMessage(error, "Server error updating usage state"),
+    });
   } finally {
     connection.release();
   }
@@ -1158,16 +1183,16 @@ export async function setUsageState(req, res) {
 // tiles + status breakdown chart. All statuses are always present in
 // the response (defaulted to 0) so the frontend doesn't have to guess
 // at missing keys.
-export async function getAssetStats(req, res) {
+export async function getAssetStats(req: Request, res: Response) {
   try {
-    const [statusRows] = await pool.query(
+    const [statusRows] = await pool.query<RowDataPacket[]>(
       `SELECT status, COUNT(*) AS count FROM assets GROUP BY status`,
     );
-    const [conditionRows] = await pool.query(
+    const [conditionRows] = await pool.query<RowDataPacket[]>(
       `SELECT \`condition\`, COUNT(*) AS count FROM assets GROUP BY \`condition\``,
     );
 
-    const byStatus = {
+    const byStatus: Record<string, number> = {
       available: 0,
       assigned: 0,
       under_repair: 0,
@@ -1180,7 +1205,12 @@ export async function getAssetStats(req, res) {
       total += row.count;
     }
 
-    const byCondition = { new: 0, good: 0, fair: 0, damaged: 0 };
+    const byCondition: Record<string, number> = {
+      new: 0,
+      good: 0,
+      fair: 0,
+      damaged: 0,
+    };
     for (const row of conditionRows) {
       byCondition[row.condition] = row.count;
     }
