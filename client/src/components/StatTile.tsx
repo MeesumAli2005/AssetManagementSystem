@@ -5,7 +5,15 @@
 // text wraps to one line or two — the value row then starts at the
 // exact same y-position across every tile, instead of shifting based
 // on label length.
-export default function StatTile({ label, value }) {
+import type { ReactNode } from "react";
+
+export default function StatTile({
+  label,
+  value,
+}: {
+  label: string;
+  value: ReactNode;
+}) {
   return (
     <div className="grid grid-rows-[2.5rem_auto] rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 shadow-sm">
       <p className="self-start overflow-hidden text-base capitalize leading-5 text-zinc-500">

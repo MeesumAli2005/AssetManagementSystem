@@ -1,5 +1,5 @@
 // coloured pill for statuses, just pick a color name and it maps to tailwind classes
-const COLOR_MAP = {
+const COLOR_MAP: Record<string, string> = {
   green:
     "bg-emerald-500/15 text-emerald-400 ring-1 ring-inset ring-emerald-500/25",
   red: "bg-red-500/15 text-red-400 ring-1 ring-inset ring-red-500/25",
@@ -8,7 +8,13 @@ const COLOR_MAP = {
 };
 
 // Usage: <StatusBadge text="Active" color="green" />
-export default function StatusBadge({ text, color = "slate" }) {
+export default function StatusBadge({
+  text,
+  color = "slate",
+}: {
+  text: string;
+  color?: string;
+}) {
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-0.5 text-sm font-medium capitalize ${COLOR_MAP[color] || COLOR_MAP.slate}`}

@@ -1,7 +1,13 @@
 // password field with the little eye icon to toggle show/hide
-import { useState } from "react";
+import { useState, type InputHTMLAttributes } from "react";
 
-export default function PasswordInput({ className = "", ...inputProps }) {
+export default function PasswordInput({
+  className = "",
+  ...inputProps
+}: { className?: string } & Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "type" | "className"
+>) {
   const [visible, setVisible] = useState(false);
 
   return (

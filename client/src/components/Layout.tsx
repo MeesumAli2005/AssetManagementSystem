@@ -1,11 +1,11 @@
 // the sidebar + topbar shell every logged in page sits inside, also polls badge counts
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getPendingAcknowledgements } from "../api/assets";
 import { getMyRequests, getAllRequests } from "../api/requests";
 
-const ICONS = {
+const ICONS: Record<string, ReactNode> = {
   categories: (
     <path
       strokeLinecap="round"
@@ -66,7 +66,7 @@ const ICONS = {
   ),
 };
 
-function Icon({ name }) {
+function Icon({ name }: { name: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -80,7 +80,15 @@ function Icon({ name }) {
   );
 }
 
-const ADMIN_LINKS = [
+interface NavLinkItem {
+  to: string;
+  label: string;
+  end?: boolean;
+  icon: string;
+  badge?: string;
+}
+
+const ADMIN_LINKS: NavLinkItem[] = [
   { to: "/admin", label: "Dashboard", end: true, icon: "dashboard" },
   { to: "/assets", label: "Assets", icon: "assets" },
   { to: "/categories", label: "Categories", icon: "categories" },
@@ -90,7 +98,7 @@ const ADMIN_LINKS = [
   { to: "/admin/requests", label: "Requests", icon: "requests", badge: "reqs" },
 ];
 
-const EMPLOYEE_LINKS = [
+const EMPLOYEE_LINKS: NavLinkItem[] = [
   { to: "/employee", label: "Dashboard", end: true, icon: "dashboard" },
   { to: "/employee/profile", label: "My Profile", icon: "profile" },
   { to: "/employee/my-assets", label: "My Assets", icon: "assets" },
@@ -104,29 +112,36 @@ const EMPLOYEE_LINKS = [
   { to: "/categories", label: "Categories", icon: "categories" },
 ];
 
-function initials(name, email) {
+function initials(name: string | null, email: string) {
   const source = (name || email || "?").trim();
   const parts = source.split(" ").filter(Boolean);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  if (parts.length >= 2) {
+    const [first, second] = parts;
+    return ((first?.[0] ?? "") + (second?.[0] ?? "")).toUpperCase();
+  }
   return source.slice(0, 2).toUpperCase();
 }
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const links = user.role === "administrator" ? ADMIN_LINKS : EMPLOYEE_LINKS;
-  const [counts, setCounts] = useState({});
+  const [counts, setCounts] = useState<Record<string, number>>({});
 
   // Re-fetched on every navigation within the app shell (Layout itself never
   // unmounts across routes, so a mount-only effect would go stale) — cheap
   // enough for a couple of small list requests, and keeps the sidebar badges
   // from drifting after the user acts on something.
   useEffect(() => {
+    // Layout only ever renders inside a ProtectedRoute, which already
+    // redirects to /login when there's no user — this guard just proves
+    // that to the type checker, which can't see across that boundary.
+    if (!user) return;
+    const currentUser = user;
     let cancelled = false;
 
     async function loadCounts() {
       try {
-        if (user.role === "administrator") {
+        if (currentUser.role === "administrator") {
           const pending = await getAllRequests({ status: "pending" });
           if (!cancelled) setCounts({ reqs: pending.length });
         } else {
@@ -151,7 +166,11 @@ export default function Layout() {
     return () => {
       cancelled = true;
     };
-  }, [user.role, location.pathname]);
+  }, [user, location.pathname]);
+
+  if (!user) return null;
+
+  const links = user.role === "administrator" ? ADMIN_LINKS : EMPLOYEE_LINKS;
 
   return (
     <div className="flex h-screen text-zinc-100 overflow-hidden">
@@ -169,7 +188,7 @@ export default function Layout() {
               <NavLink
                 key={link.to}
                 to={link.to}
-                end={link.end}
+                end={link.end ?? false}
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-lg border-l-2 px-3 py-2 text-base font-medium transition-colors ${
                     isActive

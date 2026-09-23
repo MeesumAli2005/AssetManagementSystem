@@ -9,6 +9,14 @@ export default function ConfirmDialog({
   message,
   confirmLabel = "Confirm",
   danger = false,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  danger?: boolean;
 }) {
   return (
     <Modal open={open} onClose={onClose} title={title}>

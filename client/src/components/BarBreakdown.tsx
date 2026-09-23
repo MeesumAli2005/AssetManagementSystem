@@ -1,15 +1,27 @@
 // little bar chart thing for the dashboards, no library just css widths
-const BAR_COLOR_MAP = {
+const BAR_COLOR_MAP: Record<string, string> = {
   green: "bg-emerald-500",
   red: "bg-red-500",
   amber: "bg-amber-500",
   slate: "bg-zinc-500",
 };
 
+interface BarRow {
+  label: string;
+  value: number;
+  color?: string;
+}
+
 // Plain horizontal bar breakdown — no charting library, just divs sized
 // by each row's share of the largest value.
 // Usage: <BarBreakdown title="Assets by status" rows={[{ label, value, color }]} />
-export default function BarBreakdown({ title, rows }) {
+export default function BarBreakdown({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: BarRow[];
+}) {
   const max = Math.max(1, ...rows.map((r) => r.value));
 
   return (
@@ -23,7 +35,7 @@ export default function BarBreakdown({ title, rows }) {
             </span>
             <div className="h-2.5 flex-1 rounded-full bg-zinc-800">
               <div
-                className={`h-2.5 rounded-full ${BAR_COLOR_MAP[row.color] || BAR_COLOR_MAP.slate}`}
+                className={`h-2.5 rounded-full ${(row.color && BAR_COLOR_MAP[row.color]) || BAR_COLOR_MAP.slate}`}
                 style={{ width: `${(row.value / max) * 100}%` }}
               />
             </div>

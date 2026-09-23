@@ -1,5 +1,5 @@
 // generic modal shell, closes on escape or backdrop click
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 
 //   </Modal>
 const SIZES = {
@@ -7,11 +7,23 @@ const SIZES = {
   lg: "max-w-2xl",
 };
 
-export default function Modal({ open, onClose, title, children, size = "md" }) {
+export default function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  size = "md",
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+  size?: keyof typeof SIZES;
+}) {
   useEffect(() => {
     if (!open) return;
 
-    function handleKeyDown(event) {
+    function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") onClose();
     }
 
