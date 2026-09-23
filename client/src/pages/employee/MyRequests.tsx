@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getMyRequests } from "../../api/requests";
 import StatusBadge from "../../components/StatusBadge";
+import type { RequestRecord, RequestStatus, RequestType } from "../../types";
+import { getErrorMessage } from "../../utils/errors";
 
-const STATUS_COLORS = {
+const STATUS_COLORS: Record<RequestStatus, string> = {
   pending: "amber",
   approved: "green",
   sent_for_repair: "amber",
@@ -12,14 +14,14 @@ const STATUS_COLORS = {
   completed: "slate",
 };
 
-const TYPE_LABELS = {
+const TYPE_LABELS: Record<RequestType, string> = {
   asset: "New asset",
   return: "Return",
   repair: "Repair",
 };
 
 export default function MyRequests() {
-  const [requests, setRequests] = useState([]);
+  const [requests, setRequests] = useState<RequestRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -29,7 +31,7 @@ export default function MyRequests() {
     try {
       setRequests(await getMyRequests());
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load your requests");
+      setError(getErrorMessage(err, "Failed to load your requests"));
     } finally {
       setLoading(false);
     }
@@ -107,8 +109,8 @@ export default function MyRequests() {
                     )}
                   </div>
                   <StatusBadge
-                    text={r.status.replaceAll("_", " ")}
-                    color={STATUS_COLORS[r.status]}
+                    text={(r.status ?? "pending").replaceAll("_", " ")}
+                    color={STATUS_COLORS[r.status ?? "pending"]}
                   />
                 </Link>
               </li>

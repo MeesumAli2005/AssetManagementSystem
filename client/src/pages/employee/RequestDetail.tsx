@@ -1,11 +1,15 @@
 // employee view of one of their own requests, read-only except the return ack button
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useParams, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { getRequestById, acknowledgeReturn } from "../../api/requests";
 import StatusBadge from "../../components/StatusBadge";
+import type { RequestNote, RequestRecord, RequestStatus, RequestType } from "../../types";
+import { getErrorMessage } from "../../utils/errors";
 
-const STATUS_COLORS = {
+type RequestDetailData = RequestRecord & { notes?: RequestNote[] };
+
+const STATUS_COLORS: Record<RequestStatus, string> = {
   pending: "amber",
   approved: "green",
   sent_for_repair: "amber",
@@ -13,13 +17,13 @@ const STATUS_COLORS = {
   completed: "slate",
 };
 
-const TYPE_LABELS = {
+const TYPE_LABELS: Record<RequestType, string> = {
   asset: "New asset",
   return: "Return",
   repair: "Repair",
 };
 
-const COMPLETION_LABELS = {
+const COMPLETION_LABELS: Record<RequestType, string> = {
   asset: "Asset assigned",
   return: "Return completed",
   repair: "Repair completed",
@@ -28,8 +32,10 @@ const COMPLETION_LABELS = {
 // Derives the request's lifecycle timeline from the timestamp/actor fields
 // already on the row — no separate audit table, just presenting what's
 // there in order.
-function buildTimeline(r) {
-  const steps = [{ label: "Submitted", at: r.created_at }];
+function buildTimeline(r: RequestDetailData) {
+  const steps: { label: string; at: string; by?: string | null | undefined }[] = [
+    { label: "Submitted", at: r.created_at },
+  ];
 
   if (r.reviewed_at) {
     const label =
@@ -60,7 +66,7 @@ function buildTimeline(r) {
   return steps;
 }
 
-function Field({ label, children }) {
+function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <div>
       <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">
@@ -74,7 +80,7 @@ function Field({ label, children }) {
 export default function RequestDetail() {
   const { id } = useParams();
 
-  const [request, setRequest] = useState(null);
+  const [request, setRequest] = useState<RequestDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [acking, setAcking] = useState(false);
@@ -83,9 +89,9 @@ export default function RequestDetail() {
     setLoading(true);
     setError("");
     try {
-      setRequest(await getRequestById(id));
+      setRequest(await getRequestById(Number(id)));
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load request");
+      setError(getErrorMessage(err, "Failed to load request"));
     } finally {
       setLoading(false);
     }
@@ -97,15 +103,14 @@ export default function RequestDetail() {
   }, [id]);
 
   async function handleAcknowledgeReturn() {
+    if (!request) return;
     setAcking(true);
     try {
       await acknowledgeReturn(request.id);
       toast.success("Return acknowledged");
       await load();
     } catch (err) {
-      toast.error(
-        err.response?.data?.message || "Failed to acknowledge return",
-      );
+      toast.error(getErrorMessage(err, "Failed to acknowledge return"));
     } finally {
       setAcking(false);
     }
@@ -140,8 +145,8 @@ export default function RequestDetail() {
           </h1>
         </div>
         <StatusBadge
-          text={request.status.replaceAll("_", " ")}
-          color={STATUS_COLORS[request.status]}
+          text={(request.status ?? "pending").replaceAll("_", " ")}
+          color={STATUS_COLORS[request.status ?? "pending"]}
         />
       </div>
 

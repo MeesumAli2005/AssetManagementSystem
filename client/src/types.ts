@@ -142,6 +142,28 @@ export interface AssignedAssetSummary {
   condition: AssetCondition;
 }
 
+// GET /assets/mine (getMyAssignedAssets) — a third, distinct "assigned
+// asset" shape, different again from AssignedAssetSummary and Asset: it
+// adds usage_state/category_name/acknowledged_at/assigned_at (joined from
+// the active asset_assignments row) but has none of Asset's other fields.
+export interface MyAssignedAsset {
+  id: number;
+  asset_tag: string;
+  name: string | null;
+  status: AssetStatus;
+  condition: AssetCondition;
+  usage_state: AssetUsageState;
+  category_name: string | null;
+  acknowledged_at: string | null;
+  assigned_at: string | null;
+}
+
+export interface MyAssetsSummary {
+  active: number;
+  dormant: number;
+  under_repair: number;
+}
+
 export interface MyProfile {
   id: number;
   full_name: string | null;
@@ -225,14 +247,22 @@ export interface RequestNote {
   admin_name: string | null;
 }
 
+// Covers three distinct-but-overlapping endpoints: getPendingAcknowledgements
+// (narrowest — no acknowledged_at/returned_at/is_active), getMyAcknowledgements
+// (adds those three), and getAcknowledgementById (adds employee_id + asset_status
+// on top of that). Fields only some of them return are marked optional.
 export interface Acknowledgement {
+  assignment_id: number;
   asset_id: number;
+  asset_tag: string;
   name: string | null;
   category_name: string | null;
   condition: AssetCondition;
-  is_active: number;
   assigned_at: string;
   assigned_by_name: string | null;
-  acknowledged_at: string | null;
-  returned_at: string | null;
+  is_active?: number;
+  acknowledged_at?: string | null;
+  returned_at?: string | null;
+  employee_id?: number;
+  asset_status?: AssetStatus;
 }

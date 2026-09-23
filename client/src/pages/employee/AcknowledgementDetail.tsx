@@ -1,5 +1,5 @@
 // single acknowledgement page, employee confirms they got the asset from here
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useParams, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -7,8 +7,10 @@ import {
   acknowledgeAssignment,
 } from "../../api/assets";
 import StatusBadge from "../../components/StatusBadge";
+import type { Acknowledgement } from "../../types";
+import { getErrorMessage } from "../../utils/errors";
 
-function Field({ label, children }) {
+function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <div>
       <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">
@@ -19,7 +21,7 @@ function Field({ label, children }) {
   );
 }
 
-function statusOf(item) {
+function statusOf(item: Acknowledgement) {
   if (item.acknowledged_at) return { text: "Acknowledged", color: "green" };
   if (!item.is_active) return { text: "Returned unacknowledged", color: "red" };
   return { text: "Pending", color: "amber" };
@@ -28,7 +30,7 @@ function statusOf(item) {
 export default function AcknowledgementDetail() {
   const { id } = useParams();
 
-  const [item, setItem] = useState(null);
+  const [item, setItem] = useState<Acknowledgement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [acking, setAcking] = useState(false);
@@ -37,9 +39,9 @@ export default function AcknowledgementDetail() {
     setLoading(true);
     setError("");
     try {
-      setItem(await getAcknowledgementById(id));
+      setItem(await getAcknowledgementById(Number(id)));
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load acknowledgement");
+      setError(getErrorMessage(err, "Failed to load acknowledgement"));
     } finally {
       setLoading(false);
     }
@@ -51,15 +53,14 @@ export default function AcknowledgementDetail() {
   }, [id]);
 
   async function handleAcknowledge() {
+    if (!item) return;
     setAcking(true);
     try {
       await acknowledgeAssignment(item.asset_id);
       toast.success("Receipt acknowledged");
       await load();
     } catch (err) {
-      toast.error(
-        err.response?.data?.message || "Failed to acknowledge receipt",
-      );
+      toast.error(getErrorMessage(err, "Failed to acknowledge receipt"));
     } finally {
       setAcking(false);
     }

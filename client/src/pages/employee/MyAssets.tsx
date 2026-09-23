@@ -4,8 +4,10 @@ import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { getMyAssets, setAssetUsageState } from "../../api/assets";
 import StatusBadge from "../../components/StatusBadge";
+import type { AssetStatus, MyAssetsSummary, MyAssignedAsset } from "../../types";
+import { getErrorMessage } from "../../utils/errors";
 
-const STATUS_COLORS = {
+const STATUS_COLORS: Record<AssetStatus, string> = {
   available: "green",
   assigned: "amber",
   under_repair: "red",
@@ -14,15 +16,15 @@ const STATUS_COLORS = {
 };
 
 export default function MyAssets() {
-  const [assets, setAssets] = useState([]);
-  const [summary, setSummary] = useState({
+  const [assets, setAssets] = useState<MyAssignedAsset[]>([]);
+  const [summary, setSummary] = useState<MyAssetsSummary>({
     active: 0,
     dormant: 0,
     under_repair: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [togglingId, setTogglingId] = useState(null);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
   async function load() {
     setLoading(true);
@@ -32,7 +34,7 @@ export default function MyAssets() {
       setAssets(result.data);
       setSummary(result.summary);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load your assets");
+      setError(getErrorMessage(err, "Failed to load your assets"));
     } finally {
       setLoading(false);
     }
@@ -42,7 +44,7 @@ export default function MyAssets() {
     load();
   }, []);
 
-  async function handleToggleUsage(asset) {
+  async function handleToggleUsage(asset: MyAssignedAsset) {
     const nextState = asset.usage_state === "active" ? "dormant" : "active";
     setTogglingId(asset.id);
     try {
@@ -50,9 +52,7 @@ export default function MyAssets() {
       toast.success(`"${asset.name}" marked ${nextState}`);
       await load();
     } catch (err) {
-      toast.error(
-        err.response?.data?.message || "Failed to update usage state",
-      );
+      toast.error(getErrorMessage(err, "Failed to update usage state"));
     } finally {
       setTogglingId(null);
     }

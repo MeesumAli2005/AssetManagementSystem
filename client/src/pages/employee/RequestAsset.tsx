@@ -1,12 +1,14 @@
 // form employees use to request a new asset or flag a return/repair
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { createRequest } from "../../api/requests";
 import { getAllCategories } from "../../api/categories";
 import { getMyAssets } from "../../api/assets";
+import type { Category, MyAssignedAsset, RequestType } from "../../types";
+import { getErrorMessage } from "../../utils/errors";
 
-const REQUEST_TYPES = [
+const REQUEST_TYPES: { value: RequestType; label: string }[] = [
   { value: "asset", label: "New asset" },
   { value: "return", label: "Return an asset" },
   { value: "repair", label: "Report a repair" },
@@ -15,10 +17,10 @@ const REQUEST_TYPES = [
 export default function RequestAsset() {
   const navigate = useNavigate();
 
-  const [requestType, setRequestType] = useState("asset");
-  const [categories, setCategories] = useState([]);
+  const [requestType, setRequestType] = useState<RequestType>("asset");
+  const [categories, setCategories] = useState<Category[]>([]);
   const [categoryId, setCategoryId] = useState("");
-  const [myAssets, setMyAssets] = useState([]);
+  const [myAssets, setMyAssets] = useState<MyAssignedAsset[]>([]);
   const [assetId, setAssetId] = useState("");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -32,7 +34,7 @@ export default function RequestAsset() {
       .catch(() => {});
   }, []);
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitting(true);
     try {
@@ -57,7 +59,7 @@ export default function RequestAsset() {
 
       navigate("/employee/requests");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to submit request");
+      toast.error(getErrorMessage(err, "Failed to submit request"));
     } finally {
       setSubmitting(false);
     }
@@ -82,7 +84,7 @@ export default function RequestAsset() {
           </label>
           <select
             value={requestType}
-            onChange={(e) => setRequestType(e.target.value)}
+            onChange={(e) => setRequestType(e.target.value as RequestType)}
             className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
           >
             {REQUEST_TYPES.map((t) => (

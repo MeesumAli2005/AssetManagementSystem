@@ -5,6 +5,9 @@ import type {
   Asset,
   AssetDetail,
   AssetStats,
+  AssetUsageState,
+  MyAssetsSummary,
+  MyAssignedAsset,
   PaginatedAssets,
 } from "../types";
 
@@ -77,7 +80,10 @@ export async function disposeAsset(id: number, reason: string) {
 }
 
 export async function getMyAssets() {
-  const response = await api.get<Asset[]>("/assets/mine");
+  const response = await api.get<{
+    data: MyAssignedAsset[];
+    summary: MyAssetsSummary;
+  }>("/assets/mine");
   return response.data;
 }
 
@@ -109,7 +115,10 @@ export async function acknowledgeAssignment(assetId: number) {
   return response.data;
 }
 
-export async function setAssetUsageState(assetId: number, usage_state: string) {
+export async function setAssetUsageState(
+  assetId: number,
+  usage_state: AssetUsageState,
+) {
   const response = await api.patch<{ message: string }>(
     `/assets/${assetId}/usage-state`,
     { usage_state },

@@ -5,13 +5,19 @@ import toast from "react-hot-toast";
 import { getMyAcknowledgements, acknowledgeAssignment } from "../../api/assets";
 import { getMyRequests, acknowledgeReturn } from "../../api/requests";
 import StatusBadge from "../../components/StatusBadge";
+import type { Acknowledgement, RequestRecord } from "../../types";
+import { getErrorMessage } from "../../utils/errors";
+
+type CombinedItem =
+  | { kind: "assignment"; date: Date; data: Acknowledgement }
+  | { kind: "return"; date: Date; data: RequestRecord };
 
 export default function Acknowledgements() {
-  const [assignments, setAssignments] = useState([]);
-  const [returns, setReturns] = useState([]);
+  const [assignments, setAssignments] = useState<Acknowledgement[]>([]);
+  const [returns, setReturns] = useState<RequestRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [ackingId, setAckingId] = useState(null);
+  const [ackingId, setAckingId] = useState<number | string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -28,9 +34,7 @@ export default function Acknowledgements() {
         ),
       );
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to load acknowledgements",
-      );
+      setError(getErrorMessage(err, "Failed to load acknowledgements"));
     } finally {
       setLoading(false);
     }
@@ -40,29 +44,27 @@ export default function Acknowledgements() {
     load();
   }, []);
 
-  async function handleAcknowledge(item) {
+  async function handleAcknowledge(item: Acknowledgement) {
     setAckingId(item.assignment_id);
     try {
       await acknowledgeAssignment(item.asset_id);
       toast.success(`Acknowledged receipt of "${item.name}"`);
       await load();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to acknowledge");
+      toast.error(getErrorMessage(err, "Failed to acknowledge"));
     } finally {
       setAckingId(null);
     }
   }
 
-  async function handleAcknowledgeReturn(request) {
+  async function handleAcknowledgeReturn(request: RequestRecord) {
     setAckingId(`return-${request.id}`);
     try {
       await acknowledgeReturn(request.id);
       toast.success("Return acknowledged");
       await load();
     } catch (err) {
-      toast.error(
-        err.response?.data?.message || "Failed to acknowledge return",
-      );
+      toast.error(getErrorMessage(err, "Failed to acknowledge return"));
     } finally {
       setAckingId(null);
     }
@@ -71,18 +73,22 @@ export default function Acknowledgements() {
   // A single, date-sorted history of every acknowledgement (assignment
   // receipts and return confirmations alike) — acted-on ones and still-
   // pending ones together, most recent first. Click one to see its details.
-  const combined = [
-    ...assignments.map((a) => ({
-      kind: "assignment",
-      date: new Date(a.assigned_at),
-      data: a,
-    })),
-    ...returns.map((r) => ({
-      kind: "return",
-      date: new Date(r.reviewed_at || r.created_at),
-      data: r,
-    })),
-  ].sort((a, b) => b.date - a.date);
+  const combined: CombinedItem[] = [
+    ...assignments.map(
+      (a): CombinedItem => ({
+        kind: "assignment",
+        date: new Date(a.assigned_at),
+        data: a,
+      }),
+    ),
+    ...returns.map(
+      (r): CombinedItem => ({
+        kind: "return",
+        date: new Date(r.reviewed_at || r.created_at),
+        data: r,
+      }),
+    ),
+  ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   return (
     <div className="mx-auto max-w-2xl">

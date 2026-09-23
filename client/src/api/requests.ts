@@ -10,7 +10,13 @@ type NewRequestPayload = Record<string, unknown>;
 type ReviewExtra = Record<string, unknown>;
 
 export async function createRequest(payload: NewRequestPayload) {
-  const response = await api.post<RequestRecord>("/requests", payload);
+  // available_count is only included for request_type "asset" — the
+  // backend attaches it right after checking category stock at creation.
+  const response = await api.post<{
+    id: number;
+    message: string;
+    available_count?: number;
+  }>("/requests", payload);
   return response.data;
 }
 

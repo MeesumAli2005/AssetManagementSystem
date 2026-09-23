@@ -4,8 +4,9 @@ import { useAuth } from "../context/AuthContext";
 import { getMyAssets } from "../api/assets";
 import StatTile from "../components/StatTile";
 import BarBreakdown from "../components/BarBreakdown";
+import type { AssetCondition, MyAssignedAsset } from "../types";
 
-const CONDITION_ROWS = [
+const CONDITION_ROWS: { key: AssetCondition; color: string }[] = [
   { key: "new", color: "green" },
   { key: "good", color: "green" },
   { key: "fair", color: "amber" },
@@ -14,7 +15,7 @@ const CONDITION_ROWS = [
 
 export default function EmployeeDashboard() {
   const { user } = useAuth();
-  const [assets, setAssets] = useState(null);
+  const [assets, setAssets] = useState<MyAssignedAsset[] | null>(null);
 
   useEffect(() => {
     getMyAssets()
@@ -22,16 +23,20 @@ export default function EmployeeDashboard() {
       .catch(() => {});
   }, []);
 
-  const byCondition = { new: 0, good: 0, fair: 0, damaged: 0 };
+  const byCondition: Record<AssetCondition, number> = {
+    new: 0,
+    good: 0,
+    fair: 0,
+    damaged: 0,
+  };
   for (const asset of assets || []) {
-    if (byCondition[asset.condition] !== undefined)
-      byCondition[asset.condition] += 1;
+    byCondition[asset.condition] += 1;
   }
 
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">
-        Welcome, {user.full_name || user.email}
+        Welcome, {user?.full_name || user?.email}
       </h1>
       <p className="mb-8 text-base text-zinc-500">Here's your workspace.</p>
 

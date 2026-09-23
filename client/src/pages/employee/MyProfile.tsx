@@ -1,5 +1,5 @@
 // employee's own profile page, edit name, change password, see departments/assets
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { getMyProfile, updateMyProfile } from "../../api/employees";
@@ -7,9 +7,11 @@ import { changePassword } from "../../api/auth";
 import StatusBadge from "../../components/StatusBadge";
 import Modal from "../../components/Modal";
 import PasswordInput from "../../components/PasswordInput";
+import type { MyProfile as MyProfileData } from "../../types";
+import { getErrorMessage } from "../../utils/errors";
 
 export default function MyProfile() {
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState<MyProfileData | null>(null);
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -30,21 +32,21 @@ export default function MyProfile() {
         setFullName(data.full_name || "");
       })
       .catch((err) =>
-        setError(err.response?.data?.message || "Failed to load profile"),
+        setError(getErrorMessage(err, "Failed to load profile")),
       )
       .finally(() => setLoading(false));
   }, []);
 
-  async function handleSubmit(event) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setError("");
     try {
       await updateMyProfile(fullName);
-      setProfile((prev) => ({ ...prev, full_name: fullName }));
+      setProfile((prev) => (prev ? { ...prev, full_name: fullName } : prev));
       toast.success("Profile updated");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to save profile");
+      toast.error(getErrorMessage(err, "Failed to save profile"));
     } finally {
       setSaving(false);
     }
@@ -58,7 +60,7 @@ export default function MyProfile() {
     setPasswordOpen(true);
   }
 
-  async function handleChangePassword(event) {
+  async function handleChangePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPasswordError("");
 
@@ -73,9 +75,7 @@ export default function MyProfile() {
       toast.success("Password changed");
       setPasswordOpen(false);
     } catch (err) {
-      setPasswordError(
-        err.response?.data?.message || "Failed to change password",
-      );
+      setPasswordError(getErrorMessage(err, "Failed to change password"));
     } finally {
       setPasswordSaving(false);
     }
