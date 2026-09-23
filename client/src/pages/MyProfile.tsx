@@ -1,16 +1,22 @@
-// employee's own profile page, edit name, change password, see departments/assets
+// the logged-in user's own profile page — edit name, change password, see
+// departments/assets. Shared by both roles: an admin's account is just a
+// row in the same users table, so there's nothing employee-specific about
+// viewing or editing your own name/password.
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { getMyProfile, updateMyProfile } from "../../api/employees";
-import { changePassword } from "../../api/auth";
-import StatusBadge from "../../components/StatusBadge";
-import Modal from "../../components/Modal";
-import PasswordInput from "../../components/PasswordInput";
-import type { MyProfile as MyProfileData } from "../../types";
-import { getErrorMessage } from "../../utils/errors";
+import { getMyProfile, updateMyProfile } from "../api/employees";
+import { changePassword } from "../api/auth";
+import StatusBadge from "../components/StatusBadge";
+import Modal from "../components/Modal";
+import PasswordInput from "../components/PasswordInput";
+import { useAuth } from "../context/AuthContext";
+import type { MyProfile as MyProfileData } from "../types";
+import { getErrorMessage } from "../utils/errors";
 
 export default function MyProfile() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "administrator";
   const [profile, setProfile] = useState<MyProfileData | null>(null);
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -161,7 +167,11 @@ export default function MyProfile() {
       </div>
 
       <Link
-        to="/employee/my-assets"
+        to={
+          isAdmin
+            ? `/assets?assignee_id=${profile.id}`
+            : "/employee/my-assets"
+        }
         className="mt-8 inline-flex items-center gap-1.5 text-base font-medium text-emerald-400 hover:text-emerald-300"
       >
         View my assets ({profile.assigned_assets.length})

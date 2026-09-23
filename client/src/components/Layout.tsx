@@ -90,6 +90,7 @@ interface NavLinkItem {
 
 const ADMIN_LINKS: NavLinkItem[] = [
   { to: "/admin", label: "Dashboard", end: true, icon: "dashboard" },
+  { to: "/profile", label: "My Profile", icon: "profile" },
   { to: "/assets", label: "Assets", icon: "assets" },
   { to: "/categories", label: "Categories", icon: "categories" },
 
@@ -100,7 +101,7 @@ const ADMIN_LINKS: NavLinkItem[] = [
 
 const EMPLOYEE_LINKS: NavLinkItem[] = [
   { to: "/employee", label: "Dashboard", end: true, icon: "dashboard" },
-  { to: "/employee/profile", label: "My Profile", icon: "profile" },
+  { to: "/profile", label: "My Profile", icon: "profile" },
   { to: "/employee/my-assets", label: "My Assets", icon: "assets" },
   { to: "/employee/requests", label: "Requests", icon: "requests" },
   {

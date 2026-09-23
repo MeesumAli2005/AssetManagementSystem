@@ -17,7 +17,7 @@ import EmployeeDetail from "./pages/admin/EmployeeDetail";
 import EmployeeList from "./pages/admin/EmployeeList";
 import CreateEmployee from "./pages/admin/CreateEmployee";
 import DepartmentList from "./pages/admin/DepartmentList";
-import MyProfile from "./pages/employee/MyProfile";
+import MyProfile from "./pages/MyProfile";
 import MyAssets from "./pages/employee/MyAssets";
 import Acknowledgements from "./pages/employee/Acknowledgements";
 import AcknowledgementDetail from "./pages/employee/AcknowledgementDetail";
@@ -77,6 +77,7 @@ export default function App() {
             <Route element={<Layout />}>
               <Route path="/categories" element={<CategoryList />} />
               <Route path="/assets/:id" element={<AssetDetail />} />
+              <Route path="/profile" element={<MyProfile />} />
             </Route>
           </Route>
 
@@ -87,7 +88,6 @@ export default function App() {
           <Route element={<ProtectedRoute allowedRoles={["employee"]} />}>
             <Route element={<Layout />}>
               <Route path="/employee" element={<EmployeeDashboard />} />
-              <Route path="/employee/profile" element={<MyProfile />} />
               <Route path="/employee/my-assets" element={<MyAssets />} />
               <Route
                 path="/employee/acknowledgements"
