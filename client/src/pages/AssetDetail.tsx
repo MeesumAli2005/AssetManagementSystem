@@ -1,5 +1,5 @@
 // the big one - full asset page, admin editing, retire/dispose, docs, acknowledge receipt
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useParams, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -14,15 +14,21 @@ import StatusBadge from "../components/StatusBadge";
 import Modal from "../components/Modal";
 import { useAuth } from "../context/AuthContext";
 import { formatCurrency } from "../utils/format";
+import type { AssetCondition, AssetDetail as AssetDetailData, AssetStatus } from "../types";
+import { getErrorMessage } from "../utils/errors";
 
 // "assigned" is never manually selectable here — assignment now lives
 // entirely on the employee's page (Assign asset panel), so it's excluded
 // from this list. See EDITABLE_STATUSES vs. STATUS_COLORS below.
-const EDITABLE_STATUSES = ["available", "under_repair", "retired"];
-const CONDITIONS = ["new", "good", "fair", "damaged"];
-const DOCUMENT_TYPES = ["receipt", "repair_record", "other"];
+const EDITABLE_STATUSES: AssetStatus[] = ["available", "under_repair", "retired"];
+const CONDITIONS: AssetCondition[] = ["new", "good", "fair", "damaged"];
+const DOCUMENT_TYPES: ("receipt" | "repair_record" | "other")[] = [
+  "receipt",
+  "repair_record",
+  "other",
+];
 
-const STATUS_COLORS = {
+const STATUS_COLORS: Record<AssetStatus, string> = {
   available: "green",
   assigned: "amber",
   under_repair: "red",
@@ -32,15 +38,16 @@ const STATUS_COLORS = {
 
 export default function AssetDetail() {
   const { id } = useParams();
+  const assetId = Number(id);
   const { user } = useAuth();
-  const isAdmin = user.role === "administrator";
+  const isAdmin = user?.role === "administrator";
 
-  const [asset, setAsset] = useState(null);
+  const [asset, setAsset] = useState<AssetDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [status, setStatus] = useState("");
-  const [condition, setCondition] = useState("");
+  const [status, setStatus] = useState<AssetStatus>("available");
+  const [condition, setCondition] = useState<AssetCondition>("new");
   const [brand, setBrand] = useState("");
   const [savingStatus, setSavingStatus] = useState(false);
 
@@ -53,8 +60,10 @@ export default function AssetDetail() {
   const [disposing, setDisposing] = useState(false);
 
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [file, setFile] = useState(null);
-  const [documentType, setDocumentType] = useState("receipt");
+  const [file, setFile] = useState<File | null>(null);
+  const [documentType, setDocumentType] = useState<
+    "receipt" | "repair_record" | "other"
+  >("receipt");
   const [uploading, setUploading] = useState(false);
 
   const [acking, setAcking] = useState(false);
@@ -63,13 +72,13 @@ export default function AssetDetail() {
     setLoading(true);
     setError("");
     try {
-      const data = await getAssetById(id);
+      const data = await getAssetById(assetId);
       setAsset(data);
       setStatus(data.status);
       setCondition(data.condition);
       setBrand(data.brand || "");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load asset");
+      setError(getErrorMessage(err, "Failed to load asset"));
     } finally {
       setLoading(false);
     }
@@ -80,6 +89,7 @@ export default function AssetDetail() {
   }, [id]);
 
   async function handleSaveStatusCondition() {
+    if (!asset) return;
     setSavingStatus(true);
     try {
       // Status is only included while the asset isn't currently assigned —
@@ -89,11 +99,11 @@ export default function AssetDetail() {
         asset.status === "assigned"
           ? { condition, brand }
           : { status, condition, brand };
-      await updateAsset(id, payload);
+      await updateAsset(assetId, payload);
       toast.success("Asset updated");
       await loadAsset();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to update asset");
+      toast.error(getErrorMessage(err, "Failed to update asset"));
     } finally {
       setSavingStatus(false);
     }
@@ -102,62 +112,60 @@ export default function AssetDetail() {
   async function handleAcknowledge() {
     setAcking(true);
     try {
-      await acknowledgeAssignment(id);
+      await acknowledgeAssignment(assetId);
       toast.success("Receipt acknowledged");
       await loadAsset();
     } catch (err) {
-      toast.error(
-        err.response?.data?.message || "Failed to acknowledge receipt",
-      );
+      toast.error(getErrorMessage(err, "Failed to acknowledge receipt"));
     } finally {
       setAcking(false);
     }
   }
 
-  async function handleRetire(event) {
+  async function handleRetire(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setRetiring(true);
     try {
-      await retireAsset(id, retireReason);
+      await retireAsset(assetId, retireReason);
       toast.success("Asset retired");
       setRetireOpen(false);
       setRetireReason("");
       await loadAsset();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to retire asset");
+      toast.error(getErrorMessage(err, "Failed to retire asset"));
     } finally {
       setRetiring(false);
     }
   }
 
-  async function handleDispose(event) {
+  async function handleDispose(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setDisposing(true);
     try {
-      await disposeAsset(id, disposeReason);
+      await disposeAsset(assetId, disposeReason);
       toast.success("Asset disposed of");
       setDisposeOpen(false);
       setDisposeReason("");
       await loadAsset();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to dispose of asset");
+      toast.error(getErrorMessage(err, "Failed to dispose of asset"));
     } finally {
       setDisposing(false);
     }
   }
 
-  async function handleUpload(event) {
+  async function handleUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) return;
     setUploading(true);
     try {
-      await uploadDocument(id, file, documentType);
+      await uploadDocument(assetId, file, documentType);
       toast.success("Document uploaded");
       setUploadOpen(false);
       setFile(null);
       await loadAsset();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to upload document");
+      toast.error(getErrorMessage(err, "Failed to upload document"));
     } finally {
       setUploading(false);
     }
@@ -333,7 +341,7 @@ export default function AssetDetail() {
               ) : (
                 <select
                   value={status}
-                  onChange={(e) => setStatus(e.target.value)}
+                  onChange={(e) => setStatus(e.target.value as AssetStatus)}
                   disabled={
                     asset.status === "retired" || asset.status === "disposed"
                   }
@@ -348,7 +356,7 @@ export default function AssetDetail() {
               )}
               <select
                 value={condition}
-                onChange={(e) => setCondition(e.target.value)}
+                onChange={(e) => setCondition(e.target.value as AssetCondition)}
                 disabled={
                   asset.status === "retired" || asset.status === "disposed"
                 }
@@ -434,7 +442,7 @@ export default function AssetDetail() {
                   {doc.document_type.replace("_", " ")}
                 </span>
                 <button
-                  onClick={() => downloadDocument(doc.file_url)}
+                  onClick={() => doc.file_url && downloadDocument(doc.file_url)}
                   className="font-medium text-emerald-400 hover:text-emerald-300"
                 >
                   View
@@ -541,7 +549,11 @@ export default function AssetDetail() {
             </label>
             <select
               value={documentType}
-              onChange={(e) => setDocumentType(e.target.value)}
+              onChange={(e) =>
+                setDocumentType(
+                  e.target.value as "receipt" | "repair_record" | "other",
+                )
+              }
               className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
             >
               {DOCUMENT_TYPES.map((t) => (
@@ -557,7 +569,7 @@ export default function AssetDetail() {
             </label>
             <input
               type="file"
-              onChange={(e) => setFile(e.target.files[0])}
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               required
               className="w-full text-base text-zinc-300 file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-700 file:px-3 file:py-1.5 file:text-base file:text-zinc-100 hover:file:bg-zinc-600"
             />

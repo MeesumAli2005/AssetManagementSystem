@@ -1,32 +1,42 @@
 // categories + their specs, admins can add/delete, everyone can view
-import { useState, useEffect } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import toast from "react-hot-toast";
 import {
   getAllCategories,
   createCategory,
   deleteCategory,
+  type NewSpec,
 } from "../api/categories";
 import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useAuth } from "../context/AuthContext";
+import type { Category } from "../types";
+import { getErrorMessage } from "../utils/errors";
 
-const SPEC_TYPES = ["text", "number", "boolean", "dropdown"];
+const SPEC_TYPES: NewSpec["spec_type"][] = [
+  "text",
+  "number",
+  "boolean",
+  "dropdown",
+];
 
 export default function CategoryList() {
   const { user } = useAuth();
-  const isAdmin = user.role === "administrator";
+  const isAdmin = user?.role === "administrator";
 
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
-  const [specs, setSpecs] = useState([]);
+  const [specs, setSpecs] = useState<NewSpec[]>([]);
   const [saving, setSaving] = useState(false);
 
-  const [deletingId, setDeletingId] = useState(null);
-  const [catPendingDelete, setCatPendingDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [catPendingDelete, setCatPendingDelete] = useState<Category | null>(
+    null,
+  );
 
   async function loadCategories() {
     setLoading(true);
@@ -35,7 +45,7 @@ export default function CategoryList() {
       const data = await getAllCategories();
       setCategories(data);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load categories");
+      setError(getErrorMessage(err, "Failed to load categories"));
     } finally {
       setLoading(false);
     }
@@ -58,17 +68,21 @@ export default function CategoryList() {
     ]);
   }
 
-  function updateSpecRow(index, field, value) {
+  function updateSpecRow<K extends keyof NewSpec>(
+    index: number,
+    field: K,
+    value: NewSpec[K],
+  ) {
     setSpecs((prev) =>
       prev.map((spec, i) => (i === index ? { ...spec, [field]: value } : spec)),
     );
   }
 
-  function removeSpecRow(index) {
+  function removeSpecRow(index: number) {
     setSpecs((prev) => prev.filter((_, i) => i !== index));
   }
 
-  async function handleSubmit(event) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     try {
@@ -77,7 +91,7 @@ export default function CategoryList() {
       setModalOpen(false);
       await loadCategories();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to create category");
+      toast.error(getErrorMessage(err, "Failed to create category"));
     } finally {
       setSaving(false);
     }
@@ -85,6 +99,7 @@ export default function CategoryList() {
 
   async function confirmDelete() {
     const cat = catPendingDelete;
+    if (!cat) return;
     setCatPendingDelete(null);
     setDeletingId(cat.id);
     try {
@@ -92,7 +107,7 @@ export default function CategoryList() {
       toast.success(`"${cat.name}" deleted`);
       await loadCategories();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to delete category");
+      toast.error(getErrorMessage(err, "Failed to delete category"));
     } finally {
       setDeletingId(null);
     }
@@ -220,7 +235,11 @@ export default function CategoryList() {
                   <select
                     value={spec.spec_type}
                     onChange={(e) =>
-                      updateSpecRow(index, "spec_type", e.target.value)
+                      updateSpecRow(
+                        index,
+                        "spec_type",
+                        e.target.value as NewSpec["spec_type"],
+                      )
                     }
                     className="rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-base text-zinc-100 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                   >

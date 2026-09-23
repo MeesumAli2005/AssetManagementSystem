@@ -7,8 +7,16 @@ import { getAllDepartments } from "../api/departments";
 import { getAllEmployees } from "../api/employees";
 import StatusBadge from "../components/StatusBadge";
 import { useAuth } from "../context/AuthContext";
+import type {
+  Asset,
+  AssetStatus,
+  Category,
+  Department,
+  Employee,
+} from "../types";
+import { getErrorMessage } from "../utils/errors";
 
-const STATUSES = [
+const STATUSES: AssetStatus[] = [
   "available",
   "assigned",
   "under_repair",
@@ -17,7 +25,7 @@ const STATUSES = [
 ];
 const PAGE_SIZE = 10;
 
-const STATUS_COLORS = {
+const STATUS_COLORS: Record<AssetStatus, string> = {
   available: "green",
   assigned: "amber",
   under_repair: "red",
@@ -27,17 +35,17 @@ const STATUS_COLORS = {
 
 export default function AssetList() {
   const { user } = useAuth();
-  const isAdmin = user.role === "administrator";
+  const isAdmin = user?.role === "administrator";
 
   // Lets a link like /assets?assignee_id=11 (from an employee's detail
   // page) land here with that filter already applied, instead of
   // dumping you on the unfiltered list.
   const [searchParams] = useSearchParams();
 
-  const [assets, setAssets] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [departments, setDepartments] = useState([]);
-  const [employees, setEmployees] = useState([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
 
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -82,11 +90,11 @@ export default function AssetList() {
       setError("");
       getAllAssets({
         search: search || undefined,
-        category_id: categoryId || undefined,
+        category_id: categoryId ? Number(categoryId) : undefined,
         status: status || undefined,
-        department_id: departmentId || undefined,
-        assignee_id: assigneeId || undefined,
-        assigned: assignedFilter || undefined,
+        department_id: departmentId ? Number(departmentId) : undefined,
+        assignee_id: assigneeId ? Number(assigneeId) : undefined,
+        assigned: assignedFilter === "" ? undefined : assignedFilter === "true",
         page,
         limit: PAGE_SIZE,
       })
@@ -96,7 +104,7 @@ export default function AssetList() {
           setTotal(result.total);
         })
         .catch((err) =>
-          setError(err.response?.data?.message || "Failed to load assets"),
+          setError(getErrorMessage(err, "Failed to load assets")),
         )
         .finally(() => setLoading(false));
     }, 300);

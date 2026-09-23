@@ -115,6 +115,15 @@ export interface AssetDetail extends Asset {
     spec_name: string;
     spec_type: string;
   }[];
+  // Only present when the caller is an employee (not an administrator) —
+  // their own active assignment of this asset, if any, so the frontend can
+  // offer "Acknowledge receipt" without a second request.
+  my_assignment?: {
+    assignment_id: number;
+    acknowledged_at: string | null;
+    assigned_at: string;
+    is_active: number;
+  } | null;
 }
 
 export interface PaginatedAssets {

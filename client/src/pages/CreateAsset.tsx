@@ -1,22 +1,26 @@
 // new asset form, name/tag get generated server side now so this just takes brand + category + specs
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { createAsset } from "../api/assets";
 import { getAllCategories } from "../api/categories";
+import type { AssetCondition, Category } from "../types";
+import { getErrorMessage } from "../utils/errors";
 
-const CONDITIONS = ["new", "good", "fair", "damaged"];
+const CONDITIONS: AssetCondition[] = ["new", "good", "fair", "damaged"];
 
 export default function CreateAsset() {
   const navigate = useNavigate();
 
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [brand, setBrand] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
   const [purchaseCost, setPurchaseCost] = useState("");
-  const [condition, setCondition] = useState("new");
-  const [specValues, setSpecValues] = useState({});
+  const [condition, setCondition] = useState<AssetCondition>("new");
+  const [specValues, setSpecValues] = useState<Record<number, string | boolean>>(
+    {},
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -36,11 +40,11 @@ export default function CreateAsset() {
 
   const selectedCategory = categories.find((c) => c.id === Number(categoryId));
 
-  function updateSpecValue(specId, value) {
+  function updateSpecValue(specId: number, value: string | boolean) {
     setSpecValues((prev) => ({ ...prev, [specId]: value }));
   }
 
-  async function handleSubmit(event) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setError("");
@@ -50,7 +54,7 @@ export default function CreateAsset() {
         .filter(
           (spec) =>
             spec.spec_type === "boolean" ||
-            (specValues[spec.id] || "").trim() !== "",
+            String(specValues[spec.id] || "").trim() !== "",
         )
         .map((spec) => ({
           category_spec_id: spec.id,
@@ -71,7 +75,7 @@ export default function CreateAsset() {
       toast.success(`"${created.name}" created`);
       navigate(`/assets/${created.id}`);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to create asset");
+      setError(getErrorMessage(err, "Failed to create asset"));
     } finally {
       setSaving(false);
     }
@@ -153,7 +157,7 @@ export default function CreateAsset() {
           </label>
           <select
             value={condition}
-            onChange={(e) => setCondition(e.target.value)}
+            onChange={(e) => setCondition(e.target.value as AssetCondition)}
             className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
           >
             {CONDITIONS.map((c) => (
@@ -191,11 +195,11 @@ export default function CreateAsset() {
                       </label>
                       <input
                         type={spec.spec_type === "number" ? "number" : "text"}
-                        value={specValues[spec.id] || ""}
+                        value={String(specValues[spec.id] ?? "")}
                         onChange={(e) =>
                           updateSpecValue(spec.id, e.target.value)
                         }
-                        required={spec.is_required}
+                        required={!!spec.is_required}
                         className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                       />
                     </>
