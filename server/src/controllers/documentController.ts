@@ -1,8 +1,10 @@
 // upload/list documents attached to an asset (receipts, repair records)
 import fs from "fs";
+import type { Request, Response } from "express";
+import type { RowDataPacket, ResultSetHeader } from "mysql2";
 import pool from "../config/db.js";
 
-export async function uploadDocument(req, res) {
+export async function uploadDocument(req: Request, res: Response) {
   try {
     const { asset_id } = req.params;
     const { document_type } = req.body;
@@ -11,9 +13,10 @@ export async function uploadDocument(req, res) {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    const [assetRows] = await pool.query("SELECT id FROM assets WHERE id = ?", [
-      asset_id,
-    ]);
+    const [assetRows] = await pool.query<RowDataPacket[]>(
+      "SELECT id FROM assets WHERE id = ?",
+      [asset_id],
+    );
     if (assetRows.length === 0) {
       fs.unlink(req.file.path, () => {});
       return res.status(404).json({ message: "Asset not found" });
@@ -27,10 +30,10 @@ export async function uploadDocument(req, res) {
     const filePath = `/api/${req.file.path.replace(/\\/g, "/")}`;
 
     try {
-      const [result] = await pool.query(
+      const [result] = await pool.query<ResultSetHeader>(
         `INSERT INTO asset_documents (asset_id, document_type, file_url, uploaded_by)
             VALUES (?, ?, ?, ?)`,
-        [asset_id, finalType, filePath, req.user.id],
+        [asset_id, finalType, filePath, req.user!.id],
       );
 
       return res.status(201).json({
@@ -49,10 +52,10 @@ export async function uploadDocument(req, res) {
   }
 }
 
-export async function getDocumentsForAsset(req, res) {
+export async function getDocumentsForAsset(req: Request, res: Response) {
   try {
     const { asset_id } = req.params;
-    const [rows] = await pool.query(
+    const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT d.*, u.full_name AS uploaded_by_name
         FROM asset_documents d
         LEFT JOIN users u ON d.uploaded_by = u.id

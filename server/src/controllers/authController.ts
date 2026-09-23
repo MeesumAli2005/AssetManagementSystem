@@ -1,9 +1,11 @@
 // login, logout, change password - the actual signup handler is commented out below, we removed that flow
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import type { Request, Response } from "express";
+import type { RowDataPacket } from "mysql2";
 import pool from "../config/db.js";
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET!;
 const JWT_EXPIRES_IN = "30m";
 
 // export async function signup(req, res) {
@@ -39,7 +41,7 @@ const JWT_EXPIRES_IN = "30m";
 // ---------------------------------------------------------------------
 // LOGIN
 // ---------------------------------------------------------------------
-export async function login(req, res) {
+export async function login(req: Request, res: Response) {
   try {
     const { email, password } = req.body;
 
@@ -49,9 +51,10 @@ export async function login(req, res) {
         .json({ message: "Email and password are required" });
     }
 
-    const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [
-      email,
-    ]);
+    const [rows] = await pool.query<RowDataPacket[]>(
+      "SELECT * FROM users WHERE email = ?",
+      [email],
+    );
     const user = rows[0];
 
     if (!user) {
@@ -92,7 +95,7 @@ export async function login(req, res) {
 // This endpoint exists mainly so the frontend has something to call for
 // consistency/logging.
 // ---------------------------------------------------------------------
-export async function logout(req, res) {
+export async function logout(req: Request, res: Response) {
   return res.json({
     message: "Logged out. Please discard your token client-side.",
   });
@@ -100,7 +103,7 @@ export async function logout(req, res) {
 
 // ---------------------------------------------------------------------
 // CHANGE PASSWORD
-export async function changePassword(req, res) {
+export async function changePassword(req: Request, res: Response) {
   try {
     const { current_password, new_password, confirm_password } = req.body;
 
@@ -115,9 +118,10 @@ export async function changePassword(req, res) {
     }
 
     // req.user comes from the JWT payload set by requireAuth middleware
-    const [rows] = await pool.query("SELECT * FROM users WHERE id = ?", [
-      req.user.id,
-    ]);
+    const [rows] = await pool.query<RowDataPacket[]>(
+      "SELECT * FROM users WHERE id = ?",
+      [req.user!.id],
+    );
     const user = rows[0];
 
     if (!user) {
@@ -135,7 +139,7 @@ export async function changePassword(req, res) {
     const password_hash = await bcrypt.hash(new_password, 10);
     await pool.query("UPDATE users SET password_hash = ? WHERE id = ?", [
       password_hash,
-      req.user.id,
+      req.user!.id,
     ]);
 
     return res.json({ message: "Password changed successfully" });

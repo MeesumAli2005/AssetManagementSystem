@@ -1,8 +1,10 @@
 // admin-only account stuff - creating employee/admin accounts and resetting passwords
 import bcrypt from "bcrypt";
+import type { Request, Response } from "express";
+import type { RowDataPacket, ResultSetHeader } from "mysql2";
 import pool from "../config/db.js";
 
-export async function createEmployeeAccount(req, res) {
+export async function createEmployeeAccount(req: Request, res: Response) {
   try {
     const { full_name, email, temporary_password, role } = req.body;
 
@@ -15,7 +17,7 @@ export async function createEmployeeAccount(req, res) {
     const allowedRoles = ["employee", "administrator"];
     const finalRole = allowedRoles.includes(role) ? role : "employee";
 
-    const [existing] = await pool.query(
+    const [existing] = await pool.query<RowDataPacket[]>(
       "SELECT id FROM users WHERE email = ?",
       [email],
     );
@@ -25,7 +27,7 @@ export async function createEmployeeAccount(req, res) {
 
     const password_hash = await bcrypt.hash(temporary_password, 10);
 
-    const [result] = await pool.query(
+    const [result] = await pool.query<ResultSetHeader>(
       "INSERT INTO users (full_name, email, password_hash, role) VALUES (?, ?, ?, ?)",
       [full_name, email, password_hash, finalRole],
     );
@@ -43,7 +45,7 @@ export async function createEmployeeAccount(req, res) {
   }
 }
 
-export async function resetEmployeePassword(req, res) {
+export async function resetEmployeePassword(req: Request, res: Response) {
   try {
     const { user_id, temporary_password } = req.body;
 
@@ -53,9 +55,10 @@ export async function resetEmployeePassword(req, res) {
         .json({ message: "user_id and temporary_password are required" });
     }
 
-    const [rows] = await pool.query("SELECT id FROM users WHERE id = ?", [
-      user_id,
-    ]);
+    const [rows] = await pool.query<RowDataPacket[]>(
+      "SELECT id FROM users WHERE id = ?",
+      [user_id],
+    );
     if (rows.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }

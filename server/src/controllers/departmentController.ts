@@ -1,10 +1,12 @@
 // department crud, deletion blocked if employees are still assigned to it
+import type { Request, Response } from "express";
+import type { RowDataPacket, ResultSetHeader } from "mysql2";
 import pool from "../config/db.js";
 
 // new department creation
 //only admin can do this
 
-export async function createDepartment(req, res) {
+export async function createDepartment(req: Request, res: Response) {
   try {
     const name = req.body.name;
 
@@ -12,7 +14,7 @@ export async function createDepartment(req, res) {
       return res.status(400).json({ message: "department name is required" });
     }
 
-    const [existingDepartments] = await pool.query(
+    const [existingDepartments] = await pool.query<RowDataPacket[]>(
       "SELECT id FROM departments WHERE name = ?",
       [name],
     );
@@ -23,7 +25,7 @@ export async function createDepartment(req, res) {
         .json({ message: "A department with this name already exists" });
     }
 
-    const [result] = await pool.query(
+    const [result] = await pool.query<ResultSetHeader>(
       "INSERT INTO departments (name, is_active) VALUES (?, ?)",
       [name, true],
     );
@@ -40,9 +42,9 @@ export async function createDepartment(req, res) {
 //get all dept, this is open to both admin and employees cuz
 // employees need to work cross department
 
-export async function getAllDepartments(req, res) {
+export async function getAllDepartments(req: Request, res: Response) {
   try {
-    const [departments] = await pool.query(
+    const [departments] = await pool.query<RowDataPacket[]>(
       "SELECT * FROM departments ORDER BY name ASC",
     );
 
@@ -57,7 +59,7 @@ export async function getAllDepartments(req, res) {
 
 // department updation
 
-export async function updateDepartment(req, res) {
+export async function updateDepartment(req: Request, res: Response) {
   try {
     const deptId = req.params.id;
     const name = req.body.name;
@@ -71,7 +73,7 @@ export async function updateDepartment(req, res) {
 
     // checking if the department exists or not:
 
-    const [existingDepartments] = await pool.query(
+    const [existingDepartments] = await pool.query<RowDataPacket[]>(
       "SELECT * FROM departments WHERE id= ?",
       [deptId],
     );
@@ -100,11 +102,11 @@ export async function updateDepartment(req, res) {
 // department deletion
 // blocked if any employee assigned to it
 
-export async function deleteDepartment(req, res) {
+export async function deleteDepartment(req: Request, res: Response) {
   try {
     const deptId = req.params.id;
 
-    const [assignedEmployees] = await pool.query(
+    const [assignedEmployees] = await pool.query<RowDataPacket[]>(
       "SELECT id FROM employee_departments WHERE department_id = ? LIMIT 1",
       [deptId],
     );
@@ -115,9 +117,10 @@ export async function deleteDepartment(req, res) {
       });
     }
 
-    const [result] = await pool.query("DELETE FROM departments WHERE id = ?", [
-      deptId,
-    ]);
+    const [result] = await pool.query<ResultSetHeader>(
+      "DELETE FROM departments WHERE id = ?",
+      [deptId],
+    );
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: "department was not found" });
