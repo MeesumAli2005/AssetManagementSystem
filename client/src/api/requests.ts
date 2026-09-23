@@ -1,6 +1,6 @@
 // request workflow calls - create, review, assign, return/repair steps
 import api from "./axios";
-import type { RequestNote, RequestRecord } from "../types";
+import type { RequestNote, RequestRecord, RequestStatus } from "../types";
 
 // createRequest's payload shape actually varies by request_type ("asset" vs
 // "return"/"repair" needs different fields) — left as a loose record rather
@@ -22,7 +22,7 @@ export async function getMyRequests() {
 export async function getAllRequests({
   status,
   search,
-}: { status?: string; search?: string } = {}) {
+}: { status?: string | undefined; search?: string | undefined } = {}) {
   const response = await api.get<RequestRecord[]>("/requests", {
     params: { status, search },
   });
@@ -30,7 +30,9 @@ export async function getAllRequests({
 }
 
 export async function getRequestById(id: number) {
-  const response = await api.get<RequestRecord & { notes: RequestNote[] }>(
+  // notes is only present when the caller is an administrator — the
+  // controller only attaches it for that role.
+  const response = await api.get<RequestRecord & { notes?: RequestNote[] }>(
     `/requests/${id}`,
   );
   return response.data;
@@ -46,7 +48,7 @@ export async function addRequestNote(id: number, note: string) {
 
 export async function reviewRequest(
   id: number,
-  status: string,
+  status: Extract<RequestStatus, "approved" | "rejected">,
   extra?: ReviewExtra,
 ) {
   const response = await api.patch<{ message: string }>(

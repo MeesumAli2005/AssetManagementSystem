@@ -4,10 +4,12 @@ import { Link } from "react-router-dom";
 import { getAllEmployees } from "../../api/employees";
 import { getAllDepartments } from "../../api/departments";
 import StatusBadge from "../../components/StatusBadge";
+import type { Department, Employee } from "../../types";
+import { getErrorMessage } from "../../utils/errors";
 
 export default function EmployeeList() {
-  const [employees, setEmployees] = useState([]);
-  const [departments, setDepartments] = useState([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [search, setSearch] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -28,11 +30,11 @@ export default function EmployeeList() {
       setError("");
       getAllEmployees({
         search: search || undefined,
-        department_id: departmentId || undefined,
+        department_id: departmentId ? Number(departmentId) : undefined,
       })
         .then(setEmployees)
         .catch((err) =>
-          setError(err.response?.data?.message || "Failed to load employees"),
+          setError(getErrorMessage(err, "Failed to load employees")),
         )
         .finally(() => setLoading(false));
     }, 300);

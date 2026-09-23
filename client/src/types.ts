@@ -154,12 +154,21 @@ export interface MyProfile {
   assigned_assets: AssignedAssetSummary[];
 }
 
+// getEmployeeById returns this exact same shape (id/full_name/.../
+// assigned_assets) for an admin viewing someone else's record — same
+// controller logic as getMyProfile, just keyed off :id instead of the JWT.
+export type EmployeeProfile = MyProfile;
+
+// getAllEmployees's list shape — narrower than EmployeeProfile (no
+// assigned_assets, has created_at instead of updated_at).
 export interface Employee {
   id: number;
   full_name: string | null;
   email: string;
   role: "employee" | "administrator";
   is_active: number;
+  created_at: string;
+  departments: { id: number; name: string }[];
 }
 
 export type RequestType = "asset" | "return" | "repair";
@@ -170,10 +179,11 @@ export type RequestStatus =
   | "completed"
   | "sent_for_repair";
 
-// Matches every column of the `requests` table except `repair_details`,
-// which requestController.js's stripPrivateFields() removes before the
-// response ever reaches the client — plus the display names joined in from
-// categories/assets/users.
+// Matches every column of the `requests` table, plus the display names
+// joined in from categories/assets/users. `repair_details` is only present
+// on admin-facing responses (getAllRequests, and getRequestById when the
+// caller is an administrator) — requestController.js's stripPrivateFields()
+// removes it everywhere an employee could see their own request.
 export interface RequestRecord {
   id: number;
   request_type: RequestType;
@@ -184,6 +194,7 @@ export interface RequestRecord {
   category_id: number | null;
   category_name: string | null;
   reason: string | null;
+  repair_details?: string | null;
   completion_notes: string | null;
   review_notes: string | null;
   status: RequestStatus | null;
@@ -195,6 +206,15 @@ export interface RequestRecord {
   completed_at: string | null;
   completed_by: number | null;
   acknowledged_at: string | null;
+  // Only present on admin-facing endpoints (getAllRequests, getRequestById
+  // for an administrator) — the joins that produce these aren't run for
+  // getMyRequests/getMyRequests-shaped responses, hence optional.
+  employee_name?: string;
+  employee_email?: string;
+  asset_status?: AssetStatus;
+  completed_by_name?: string;
+  resulting_asset_name?: string | null;
+  resulting_asset_tag?: string | null;
 }
 
 export interface RequestNote {

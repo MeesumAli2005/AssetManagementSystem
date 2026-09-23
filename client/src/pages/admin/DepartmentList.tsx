@@ -1,5 +1,5 @@
 // department crud page, one modal handles both create and edit
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   getAllDepartments,
   createDepartment,
@@ -10,22 +10,26 @@ import StatusBadge from "../../components/StatusBadge";
 import Modal from "../../components/Modal";
 import toast from "react-hot-toast";
 import ConfirmDialog from "../../components/ConfirmDialog";
+import type { Department } from "../../types";
+import { getErrorMessage } from "../../utils/errors";
 
 export default function DepartmentList() {
-  const [departments, setDepartments] = useState([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   // Modal is shared between "create new" and "edit existing" — editingDept
   // is null for create, or the department object being edited.
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingDept, setEditingDept] = useState(null);
+  const [editingDept, setEditingDept] = useState<Department | null>(null);
   const [formName, setFormName] = useState("");
   const [formActive, setFormActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
-  const [deletingId, setDeletingId] = useState(null);
-  const [deptPendingDelete, setDeptPendingDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deptPendingDelete, setDeptPendingDelete] = useState<Department | null>(
+    null,
+  );
 
   async function loadDepartments() {
     setLoading(true);
@@ -34,7 +38,7 @@ export default function DepartmentList() {
       const data = await getAllDepartments();
       setDepartments(data);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load departments");
+      setError(getErrorMessage(err, "Failed to load departments"));
     } finally {
       setLoading(false);
     }
@@ -52,7 +56,7 @@ export default function DepartmentList() {
     setModalOpen(true);
   }
 
-  function openEditModal(dept) {
+  function openEditModal(dept: Department) {
     setEditingDept(dept);
     setFormName(dept.name);
     setFormActive(!!dept.is_active);
@@ -60,12 +64,13 @@ export default function DepartmentList() {
     setModalOpen(true);
   }
 
-  function requestDelete(dept) {
+  function requestDelete(dept: Department) {
     setDeptPendingDelete(dept);
   }
 
   async function confirmDelete() {
     const dept = deptPendingDelete;
+    if (!dept) return;
     setDeptPendingDelete(null);
     setDeletingId(dept.id);
 
@@ -74,13 +79,13 @@ export default function DepartmentList() {
       toast.success(`"${dept.name}" deleted`);
       await loadDepartments();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to delete department");
+      toast.error(getErrorMessage(err, "Failed to delete department"));
     } finally {
       setDeletingId(null);
     }
   }
 
-  async function handleSubmit(event) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setFormError("");
@@ -98,7 +103,7 @@ export default function DepartmentList() {
       setModalOpen(false);
       await loadDepartments();
     } catch (err) {
-      setFormError(err.response?.data?.message || "Failed to save department");
+      setFormError(getErrorMessage(err, "Failed to save department"));
     } finally {
       setSaving(false);
     }

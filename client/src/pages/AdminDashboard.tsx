@@ -4,8 +4,9 @@ import { useAuth } from "../context/AuthContext";
 import { getAssetStats } from "../api/assets";
 import StatTile from "../components/StatTile";
 import BarBreakdown from "../components/BarBreakdown";
+import type { AssetCondition, AssetStats, AssetStatus } from "../types";
 
-const STATUS_ROWS = [
+const STATUS_ROWS: { key: AssetStatus; color: string }[] = [
   { key: "available", color: "green" },
   { key: "assigned", color: "amber" },
   { key: "under_repair", color: "red" },
@@ -13,7 +14,7 @@ const STATUS_ROWS = [
   { key: "disposed", color: "slate" },
 ];
 
-const CONDITION_ROWS = [
+const CONDITION_ROWS: { key: AssetCondition; color: string }[] = [
   { key: "new", color: "green" },
   { key: "good", color: "green" },
   { key: "fair", color: "amber" },
@@ -22,7 +23,7 @@ const CONDITION_ROWS = [
 
 export default function AdminDashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState<AssetStats | null>(null);
 
   useEffect(() => {
     getAssetStats()
@@ -30,13 +31,14 @@ export default function AdminDashboard() {
       .catch(() => {});
   }, []);
 
-  const byStatus = stats?.byStatus || {};
-  const byCondition = stats?.byCondition || {};
+  const byStatus: Partial<Record<AssetStatus, number>> = stats?.byStatus || {};
+  const byCondition: Partial<Record<AssetCondition, number>> =
+    stats?.byCondition || {};
 
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-1 font-serif text-3xl font-bold tracking-tight text-zinc-100">
-        Welcome, {user.full_name || user.email}
+        Welcome, {user?.full_name || user?.email}
       </h1>
       <p className="mb-8 text-base text-zinc-500">
         Here's what you can manage today.

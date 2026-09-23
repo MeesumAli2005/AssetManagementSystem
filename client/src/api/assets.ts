@@ -9,15 +9,15 @@ import type {
 } from "../types";
 
 interface AssetListFilters {
-  search?: string;
-  category_id?: number;
-  status?: string;
-  condition?: string;
-  department_id?: number;
-  assignee_id?: number;
-  assigned?: boolean;
-  page?: number;
-  limit?: number;
+  search?: string | undefined;
+  category_id?: number | undefined;
+  status?: string | undefined;
+  condition?: string | undefined;
+  department_id?: number | undefined;
+  assignee_id?: number | undefined;
+  assigned?: boolean | undefined;
+  page?: number | undefined;
+  limit?: number | undefined;
 }
 
 export async function getAllAssets({

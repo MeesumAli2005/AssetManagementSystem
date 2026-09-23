@@ -1,11 +1,11 @@
 // employee-facing api calls, profile stuff and admin employee management
 import api from "./axios";
-import type { Employee, MyProfile } from "../types";
+import type { Employee, EmployeeProfile, MyProfile } from "../types";
 
 export async function getAllEmployees({
   search,
   department_id,
-}: { search?: string; department_id?: number } = {}) {
+}: { search?: string | undefined; department_id?: number | undefined } = {}) {
   const response = await api.get<Employee[]>("/employees", {
     params: { search, department_id },
   });
@@ -13,7 +13,7 @@ export async function getAllEmployees({
 }
 
 export async function getEmployeeById(id: number) {
-  const response = await api.get<Employee>(`/employees/${id}`);
+  const response = await api.get<EmployeeProfile>(`/employees/${id}`);
   return response.data;
 }
 
@@ -38,7 +38,7 @@ export async function createEmployee({
   full_name: string;
   email: string;
   temporary_password: string;
-  role: string;
+  role: "employee" | "administrator";
 }) {
   const response = await api.post<{ id: number; email: string; role: string }>(
     "/employees",

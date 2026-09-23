@@ -1,5 +1,5 @@
 // single employee page for admins - edit profile/departments, reset password, assign/unassign assets
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useParams, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -12,8 +12,16 @@ import { getAllDepartments } from "../../api/departments";
 import { getAllAssets, updateAsset } from "../../api/assets";
 import StatusBadge from "../../components/StatusBadge";
 import Modal from "../../components/Modal";
+import type {
+  Asset,
+  AssetStatus,
+  AssignedAssetSummary,
+  Department,
+  EmployeeProfile,
+} from "../../types";
+import { getErrorMessage } from "../../utils/errors";
 
-const ASSET_STATUS_COLORS = {
+const ASSET_STATUS_COLORS: Record<AssetStatus, string> = {
   available: "green",
   assigned: "amber",
   under_repair: "red",
@@ -23,11 +31,12 @@ const ASSET_STATUS_COLORS = {
 
 export default function EmployeeDetail() {
   const { id } = useParams();
+  const employeeId = Number(id);
 
-  const [employee, setEmployee] = useState(null);
-  const [allDepartments, setAllDepartments] = useState([]);
+  const [employee, setEmployee] = useState<EmployeeProfile | null>(null);
+  const [allDepartments, setAllDepartments] = useState<Department[]>([]);
   const [fullName, setFullName] = useState("");
-  const [selectedDeptIds, setSelectedDeptIds] = useState([]);
+  const [selectedDeptIds, setSelectedDeptIds] = useState<number[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,10 +48,10 @@ export default function EmployeeDetail() {
   const [resetSaving, setResetSaving] = useState(false);
   const [resetError, setResetError] = useState("");
 
-  const [availableAssets, setAvailableAssets] = useState([]);
+  const [availableAssets, setAvailableAssets] = useState<Asset[]>([]);
   const [assetToAssign, setAssetToAssign] = useState("");
   const [assigning, setAssigning] = useState(false);
-  const [unassigningId, setUnassigningId] = useState(null);
+  const [unassigningId, setUnassigningId] = useState<number | null>(null);
 
   // Loads (or reloads) everything this page needs. Called on mount and
   // again after any successful save, so the UI always reflects the server.
@@ -52,7 +61,7 @@ export default function EmployeeDetail() {
     try {
       const [employeeData, departmentsData, availableAssetsResult] =
         await Promise.all([
-          getEmployeeById(id),
+          getEmployeeById(employeeId),
           getAllDepartments(),
           getAllAssets({ status: "available", limit: 100 }),
         ]);
@@ -63,7 +72,7 @@ export default function EmployeeDetail() {
       setSelectedDeptIds(employeeData.departments.map((d) => d.id));
       setAvailableAssets(availableAssetsResult.data);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load employee");
+      setError(getErrorMessage(err, "Failed to load employee"));
     } finally {
       setLoading(false);
     }
@@ -74,7 +83,7 @@ export default function EmployeeDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  function toggleDepartment(deptId) {
+  function toggleDepartment(deptId: number) {
     setSelectedDeptIds((prev) =>
       prev.includes(deptId)
         ? prev.filter((existingId) => existingId !== deptId)
@@ -82,8 +91,9 @@ export default function EmployeeDetail() {
     );
   }
 
-  async function handleSave(event) {
+  async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!employee) return;
     setSaving(true);
     try {
       const nameChanged = fullName !== employee.full_name;
@@ -92,7 +102,7 @@ export default function EmployeeDetail() {
       const deptsChanged =
         JSON.stringify(oldDeptIds) !== JSON.stringify(newDeptIds);
 
-      await updateEmployee(id, {
+      await updateEmployee(employeeId, {
         full_name: fullName,
         department_ids: selectedDeptIds,
       });
@@ -108,7 +118,7 @@ export default function EmployeeDetail() {
       toast.success(message);
       await loadData();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to save changes");
+      toast.error(getErrorMessage(err, "Failed to save changes"));
     } finally {
       setSaving(false);
     }
@@ -121,7 +131,7 @@ export default function EmployeeDetail() {
     setResetOpen(true);
   }
 
-  async function handleResetPassword(event) {
+  async function handleResetPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setResetError("");
 
@@ -132,25 +142,26 @@ export default function EmployeeDetail() {
 
     setResetSaving(true);
     try {
-      await resetEmployeePassword(id, tempPassword);
-      toast.success(`Password reset for ${employee.full_name}`);
+      await resetEmployeePassword(employeeId, tempPassword);
+      toast.success(`Password reset for ${employee?.full_name}`);
       setResetOpen(false);
     } catch (err) {
-      setResetError(err.response?.data?.message || "Failed to reset password");
+      setResetError(getErrorMessage(err, "Failed to reset password"));
     } finally {
       setResetSaving(false);
     }
   }
 
   async function handleToggleActive() {
+    if (!employee) return;
     setSaving(true);
     try {
       const activating = !employee.is_active;
-      await setEmployeeActiveStatus(id, activating);
+      await setEmployeeActiveStatus(employeeId, activating);
       toast.success(activating ? "Employee activated" : "Employee deactivated");
       await loadData();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to update status");
+      toast.error(getErrorMessage(err, "Failed to update status"));
     } finally {
       setSaving(false);
     }
@@ -161,20 +172,20 @@ export default function EmployeeDetail() {
     setAssigning(true);
     try {
       const asset = availableAssets.find((a) => a.id === Number(assetToAssign));
-      await updateAsset(assetToAssign, { assignee_id: Number(id) });
+      await updateAsset(Number(assetToAssign), { assignee_id: employeeId });
       toast.success(
-        `"${asset?.name || "Asset"}" assigned to ${employee.full_name}`,
+        `"${asset?.name || "Asset"}" assigned to ${employee?.full_name}`,
       );
       setAssetToAssign("");
       await loadData();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to assign asset");
+      toast.error(getErrorMessage(err, "Failed to assign asset"));
     } finally {
       setAssigning(false);
     }
   }
 
-  async function handleUnassign(asset) {
+  async function handleUnassign(asset: AssignedAssetSummary) {
     setUnassigningId(asset.id);
     try {
       // Status isn't sent — the backend derives it (back to "available",
@@ -184,7 +195,7 @@ export default function EmployeeDetail() {
       toast.success(`"${asset.name}" unassigned`);
       await loadData();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to unassign asset");
+      toast.error(getErrorMessage(err, "Failed to unassign asset"));
     } finally {
       setUnassigningId(null);
     }

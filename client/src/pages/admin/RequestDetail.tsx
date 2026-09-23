@@ -1,5 +1,5 @@
 // admin side of a single request - review/approve/reject, assign asset, complete return/repair, notes
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useParams, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -17,8 +17,12 @@ import { getAllAssets } from "../../api/assets";
 import StatusBadge from "../../components/StatusBadge";
 
 import Modal from "../../components/Modal";
+import type { Asset, RequestNote, RequestRecord, RequestStatus, RequestType } from "../../types";
+import { getErrorMessage } from "../../utils/errors";
 
-const STATUS_COLORS = {
+type RequestDetailData = RequestRecord & { notes?: RequestNote[] };
+
+const STATUS_COLORS: Record<RequestStatus, string> = {
   pending: "amber",
   approved: "green",
   sent_for_repair: "amber",
@@ -26,13 +30,13 @@ const STATUS_COLORS = {
   completed: "slate",
 };
 
-const TYPE_LABELS = {
+const TYPE_LABELS: Record<RequestType, string> = {
   asset: "New asset",
   return: "Return",
   repair: "Repair",
 };
 
-const COMPLETION_LABELS = {
+const COMPLETION_LABELS: Record<RequestType, string> = {
   asset: "Asset assigned",
   return: "Return completed",
   repair: "Repair completed",
@@ -41,8 +45,9 @@ const COMPLETION_LABELS = {
 // Derives the request's lifecycle timeline from the timestamp/actor fields
 // already on the row — no separate audit table, just presenting what's
 // there in order.
-function buildTimeline(r) {
-  const steps = [{ label: "Submitted", at: r.created_at, by: r.employee_name }];
+function buildTimeline(r: RequestDetailData) {
+  const steps: { label: string; at: string; by: string | null | undefined }[] =
+    [{ label: "Submitted", at: r.created_at, by: r.employee_name }];
 
   if (r.reviewed_at) {
     const label =
@@ -73,7 +78,7 @@ function buildTimeline(r) {
   return steps;
 }
 
-function waitingCaption(r) {
+function waitingCaption(r: RequestDetailData) {
   if (r.status === "approved" && r.request_type === "asset")
     return "Awaiting asset assignment";
   if (r.status === "approved" && r.request_type === "return")
@@ -89,7 +94,7 @@ function waitingCaption(r) {
   return null;
 }
 
-function Field({ label, children }) {
+function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <div>
       <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">
@@ -102,18 +107,21 @@ function Field({ label, children }) {
 
 export default function RequestDetail() {
   const { id } = useParams();
+  const requestId = Number(id);
 
-  const [request, setRequest] = useState(null);
+  const [request, setRequest] = useState<RequestDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [acting, setActing] = useState(false);
 
   const [assignOpen, setAssignOpen] = useState(false);
-  const [availableAssets, setAvailableAssets] = useState([]);
+  const [availableAssets, setAvailableAssets] = useState<Asset[]>([]);
   const [chosenAssetId, setChosenAssetId] = useState("");
 
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [reviewAction, setReviewAction] = useState(null); // 'approved' | 'rejected'
+  const [reviewAction, setReviewAction] = useState<
+    "approved" | "rejected" | null
+  >(null);
   const [reviewNotes, setReviewNotes] = useState("");
   const [repairDetails, setRepairDetails] = useState("");
 
@@ -131,9 +139,9 @@ export default function RequestDetail() {
     setError("");
 
     try {
-      setRequest(await getRequestById(id));
+      setRequest(await getRequestById(requestId));
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load request");
+      setError(getErrorMessage(err, "Failed to load request"));
     } finally {
       setLoading(false);
     }
@@ -143,18 +151,24 @@ export default function RequestDetail() {
     load();
   }, [id]);
 
-  function openReview(action) {
+  function openReview(action: "approved" | "rejected") {
     setReviewAction(action);
     setReviewNotes("");
     setRepairDetails("");
     setReviewOpen(true);
   }
 
-  async function handleSubmitReview(e) {
+  async function handleSubmitReview(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!request || !reviewAction) return;
     setActing(true);
     try {
-      const extra = { review_notes: reviewNotes || undefined };
+      const extra: {
+        review_notes?: string | undefined;
+        repair_details?: string | undefined;
+      } = {
+        review_notes: reviewNotes || undefined,
+      };
       if (reviewAction === "approved" && request.request_type === "repair") {
         extra.repair_details = repairDetails || undefined;
       }
@@ -165,8 +179,10 @@ export default function RequestDetail() {
       await load();
     } catch (err) {
       toast.error(
-        err.response?.data?.message ||
+        getErrorMessage(
+          err,
           `Failed to ${reviewAction === "approved" ? "approve" : "reject"} request`,
+        ),
       );
     } finally {
       setActing(false);
@@ -174,12 +190,13 @@ export default function RequestDetail() {
   }
 
   async function openAssignModal() {
+    if (!request) return;
     setChosenAssetId("");
     setAvailableAssets([]);
     setAssignOpen(true);
     try {
       const result = await getAllAssets({
-        category_id: request.category_id,
+        category_id: request.category_id ?? undefined,
         status: "available",
         limit: 100,
       });
@@ -189,8 +206,9 @@ export default function RequestDetail() {
     }
   }
 
-  async function handleAssign(e) {
+  async function handleAssign(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!request) return;
     setActing(true);
     try {
       const result = await assignAssetToRequest(
@@ -201,14 +219,15 @@ export default function RequestDetail() {
       setAssignOpen(false);
       await load();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to assign asset");
+      toast.error(getErrorMessage(err, "Failed to assign asset"));
     } finally {
       setActing(false);
     }
   }
 
-  async function handleCompleteReturn(e) {
+  async function handleCompleteReturn(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!request) return;
     setActing(true);
     try {
       const result = await completeReturn(request.id, returnNotes || undefined);
@@ -216,14 +235,15 @@ export default function RequestDetail() {
       setReturnCompleteOpen(false);
       await load();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to complete return");
+      toast.error(getErrorMessage(err, "Failed to complete return"));
     } finally {
       setActing(false);
     }
   }
 
-  async function handleCompleteRepair(e) {
+  async function handleCompleteRepair(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!request) return;
     setActing(true);
     try {
       const result = await completeRepair(request.id, repairNotes || undefined);
@@ -231,15 +251,15 @@ export default function RequestDetail() {
       setRepairCompleteOpen(false);
       await load();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to complete repair");
+      toast.error(getErrorMessage(err, "Failed to complete repair"));
     } finally {
       setActing(false);
     }
   }
 
-  async function handleAddNote(e) {
+  async function handleAddNote(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!noteText.trim()) return;
+    if (!noteText.trim() || !request) return;
     setAddingNote(true);
     try {
       await addRequestNote(request.id, noteText.trim());
@@ -247,7 +267,7 @@ export default function RequestDetail() {
       toast.success("Note added");
       await load();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to add note");
+      toast.error(getErrorMessage(err, "Failed to add note"));
     } finally {
       setAddingNote(false);
     }
@@ -280,8 +300,8 @@ export default function RequestDetail() {
           </p>
         </div>
         <StatusBadge
-          text={request.status.replaceAll("_", " ")}
-          color={STATUS_COLORS[request.status]}
+          text={(request.status ?? "pending").replaceAll("_", " ")}
+          color={STATUS_COLORS[request.status ?? "pending"]}
         />
       </div>
 

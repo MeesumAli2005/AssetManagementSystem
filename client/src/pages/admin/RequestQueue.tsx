@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getAllRequests } from "../../api/requests";
 import StatusBadge from "../../components/StatusBadge";
+import type { RequestRecord, RequestStatus, RequestType } from "../../types";
+import { getErrorMessage } from "../../utils/errors";
 
-const STATUS_COLORS = {
+const STATUS_COLORS: Record<RequestStatus, string> = {
   pending: "amber",
   approved: "green",
   sent_for_repair: "amber",
@@ -12,13 +14,13 @@ const STATUS_COLORS = {
   completed: "slate",
 };
 
-const TYPE_LABELS = {
+const TYPE_LABELS: Record<RequestType, string> = {
   asset: "New asset",
   return: "Return",
   repair: "Repair",
 };
 
-const STATUS_FILTERS = [
+const STATUS_FILTERS: (RequestStatus | "all")[] = [
   "pending",
   "approved",
   "sent_for_repair",
@@ -27,7 +29,7 @@ const STATUS_FILTERS = [
   "all",
 ];
 
-function waitingCaption(r) {
+function waitingCaption(r: RequestRecord) {
   if (r.status === "approved" && r.request_type === "asset")
     return "Awaiting asset assignment";
   if (r.status === "approved" && r.request_type === "return")
@@ -44,8 +46,10 @@ function waitingCaption(r) {
 }
 
 export default function RequestQueue() {
-  const [requests, setRequests] = useState([]);
-  const [statusFilter, setStatusFilter] = useState("pending");
+  const [requests, setRequests] = useState<RequestRecord[]>([]);
+  const [statusFilter, setStatusFilter] = useState<RequestStatus | "all">(
+    "pending",
+  );
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -62,7 +66,7 @@ export default function RequestQueue() {
         }),
       );
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load requests");
+      setError(getErrorMessage(err, "Failed to load requests"));
     } finally {
       setLoading(false);
     }
@@ -152,8 +156,8 @@ export default function RequestQueue() {
                 </div>
 
                 <StatusBadge
-                  text={r.status.replaceAll("_", " ")}
-                  color={STATUS_COLORS[r.status]}
+                  text={(r.status ?? "pending").replaceAll("_", " ")}
+                  color={STATUS_COLORS[r.status ?? "pending"]}
                 />
               </Link>
             </li>
