@@ -1,7 +1,8 @@
 // login page, redirects to admin or employee dashboard depending on role
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { getErrorMessage } from "../utils/errors";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -12,7 +13,7 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -25,7 +26,7 @@ export default function Login() {
         navigate("/employee");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      setError(getErrorMessage(err, "Login failed"));
     } finally {
       setLoading(false);
     }
