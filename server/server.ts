@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import multer from "multer";
 import swaggerUi from "swagger-ui-express";
+import type { ErrorRequestHandler } from "express";
 
 import router from "./src/routes/index.js";
 
@@ -23,14 +24,15 @@ app.get("/api-docs.json", (req, res) => res.json(swaggerSpec));
 
 app.get("/", (req, res) => res.json({ status: "API running" }));
 
-app.use((err, req, res, next) => {
+const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   if (err instanceof multer.MulterError || err instanceof FileTypeError) {
     return res.status(400).json({ message: err.message });
   }
 
   console.error(err);
   return res.status(500).json({ message: "Internal server error" });
-});
+};
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
