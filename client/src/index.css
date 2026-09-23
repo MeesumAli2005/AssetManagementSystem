@@ -26,7 +26,7 @@ body {
      darker than the bg-zinc-900/60 cards sitting on top of it — going
      all the way to zinc-900 (#18181b) would match the cards' color
      exactly and erase that depth. */
-  background: #131316;
+  background: #222229;
   /* zinc-100 — matches the brightest text tier already used throughout
      the app (e.g. every h1), set explicitly here instead of leaving it
      to fall back on whatever the browser's dark color-scheme default
