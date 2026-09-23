@@ -21,10 +21,12 @@ body,
 
 body {
   margin: 0;
-  /* zinc-950 — solid, not translucent, so cards using bg-zinc-900/60
-     actually read as a lighter surface floating over a dark page
-     instead of blending into a washed-out background. */
-  background: #09090b;
+  /* A step above zinc-950 (#09090b) for a bit of grey instead of
+     near-black, but still solid (not translucent) and still clearly
+     darker than the bg-zinc-900/60 cards sitting on top of it — going
+     all the way to zinc-900 (#18181b) would match the cards' color
+     exactly and erase that depth. */
+  background: #131316;
   /* zinc-100 — matches the brightest text tier already used throughout
      the app (e.g. every h1), set explicitly here instead of leaving it
      to fall back on whatever the browser's dark color-scheme default
