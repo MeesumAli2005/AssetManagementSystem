@@ -11,12 +11,13 @@ import StatusBadge from "../components/StatusBadge";
 import Modal from "../components/Modal";
 import PasswordInput from "../components/PasswordInput";
 import { useAuth } from "../context/AuthContext";
+import { ROLES } from "../constants";
 import type { MyProfile as MyProfileData } from "../types";
 import { getErrorMessage } from "../utils/errors";
 
 export default function MyProfile() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "administrator";
+  const isAdmin = user?.role === ROLES.ADMINISTRATOR;
   const [profile, setProfile] = useState<MyProfileData | null>(null);
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(true);

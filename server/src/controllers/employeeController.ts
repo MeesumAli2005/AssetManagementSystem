@@ -12,6 +12,7 @@ import bcrypt from "bcrypt";
 import type { Request, Response } from "express";
 import type { RowDataPacket } from "mysql2";
 import pool from "../config/db.js";
+import { ROLES } from "../constants.js";
 
 // these are the self service functions
 export async function getMyProfile(req: Request, res: Response) {
@@ -81,11 +82,11 @@ export async function getAllEmployees(req: Request, res: Response) {
             u.id,u.full_name,u.email,
             u.role,u.is_active,u.created_at
 
-        FROM users u WHERE u.role = 'employee'`;
+        FROM users u WHERE u.role = ?`;
 
     // This array holds the actual values that go where the "?" marks are
     // in the query - keeping values separate from the query will prevent sql injection
-    const queryValues = [];
+    const queryValues: unknown[] = [ROLES.EMPLOYEE];
 
     // if a search term was given, add a filter
     if (search) {
@@ -137,9 +138,9 @@ export async function getEmployeeById(req: Request, res: Response) {
       `
         SELECT id, full_name, email, role, is_active, created_at, updated_at
         FROM users
-        WHERE id = ? AND role = 'employee'
+        WHERE id = ? AND role = ?
         `,
-      [employeeId],
+      [employeeId, ROLES.EMPLOYEE],
     );
 
     if (users.length === 0) {
@@ -212,7 +213,7 @@ export async function updateEmployee(req: Request, res: Response) {
     // check if it exists
     const [existingUsers] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM users WHERE id = ? AND role = ?",
-      [employeeId, "employee"],
+      [employeeId, ROLES.EMPLOYEE],
     );
 
     if (existingUsers.length === 0) {
@@ -291,7 +292,7 @@ export async function setEmployeeActiveStatus(req: Request, res: Response) {
 
     const [existingUsers] = await pool.query<RowDataPacket[]>(
       "SELECT id FROM users WHERE id = ? AND role = ?",
-      [employeeId, "employee"],
+      [employeeId, ROLES.EMPLOYEE],
     );
 
     if (existingUsers.length === 0) {

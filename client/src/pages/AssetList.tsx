@@ -7,6 +7,7 @@ import { getAllDepartments } from "../api/departments";
 import { getAllEmployees } from "../api/employees";
 import StatusBadge from "../components/StatusBadge";
 import { useAuth } from "../context/AuthContext";
+import { ROLES } from "../constants";
 import type {
   Asset,
   AssetStatus,
@@ -35,7 +36,7 @@ const STATUS_COLORS: Record<AssetStatus, string> = {
 
 export default function AssetList() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "administrator";
+  const isAdmin = user?.role === ROLES.ADMINISTRATOR;
 
   // Lets a link like /assets?assignee_id=11 (from an employee's detail
   // page) land here with that filter already applied, instead of

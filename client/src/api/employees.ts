@@ -1,6 +1,7 @@
 // employee-facing api calls, profile stuff and admin employee management
 import api from "./axios";
 import type { Employee, EmployeeProfile, MyProfile } from "../types";
+import type { Role } from "../constants";
 
 export async function getAllEmployees({
   search,
@@ -38,7 +39,7 @@ export async function createEmployee({
   full_name: string;
   email: string;
   temporary_password: string;
-  role: "employee" | "administrator";
+  role: Role;
 }) {
   const response = await api.post<{ id: number; email: string; role: string }>(
     "/employees",

@@ -2,6 +2,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { ROLES } from "../constants";
 import { getPendingAcknowledgements } from "../api/assets";
 import { getMyRequests, getAllRequests } from "../api/requests";
 
@@ -142,7 +143,7 @@ export default function Layout() {
 
     async function loadCounts() {
       try {
-        if (currentUser.role === "administrator") {
+        if (currentUser.role === ROLES.ADMINISTRATOR) {
           const pending = await getAllRequests({ status: "pending" });
           if (!cancelled) setCounts({ reqs: pending.length });
         } else {
@@ -171,7 +172,7 @@ export default function Layout() {
 
   if (!user) return null;
 
-  const links = user.role === "administrator" ? ADMIN_LINKS : EMPLOYEE_LINKS;
+  const links = user.role === ROLES.ADMINISTRATOR ? ADMIN_LINKS : EMPLOYEE_LINKS;
 
   return (
     <div className="flex h-screen text-zinc-100 overflow-hidden">

@@ -1,5 +1,6 @@
 import swaggerJsdoc from "swagger-jsdoc";
 import type { Options } from "swagger-jsdoc";
+import { ROLES } from "../constants.js";
 
 const options: Options = {
   definition: {
@@ -11,7 +12,10 @@ const options: Options = {
         "REST API for the Asset Management and Tracking System — authentication, employee/admin accounts, asset categories, asset inventory, and supporting document uploads.",
     },
     servers: [
-      { url: "http://172.20.2.224:5000", description: "LOCAL DEV" }
+      {
+        url: process.env.PUBLIC_API_URL ?? "http://172.20.2.224:5000",
+        description: "LOCAL DEV",
+      },
     ],
 
     components: {
@@ -39,7 +43,7 @@ const options: Options = {
             id: { type: "integer" },
             full_name: { type: "string" },
             email: { type: "string", format: "email" },
-            role: { type: "string", enum: ["employee", "administrator"] },
+            role: { type: "string", enum: Object.values(ROLES) },
           },
         },
 

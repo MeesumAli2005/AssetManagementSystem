@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import type { Request, Response } from "express";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
 import pool from "../config/db.js";
+import { BCRYPT_SALT_ROUNDS, ROLES } from "../constants.js";
 
 export async function createEmployeeAccount(req: Request, res: Response) {
   try {
@@ -14,8 +15,8 @@ export async function createEmployeeAccount(req: Request, res: Response) {
         .json({ message: "Email and temporary password are required" });
     }
 
-    const allowedRoles = ["employee", "administrator"];
-    const finalRole = allowedRoles.includes(role) ? role : "employee";
+    const allowedRoles: string[] = Object.values(ROLES);
+    const finalRole = allowedRoles.includes(role) ? role : ROLES.EMPLOYEE;
 
     const [existing] = await pool.query<RowDataPacket[]>(
       "SELECT id FROM users WHERE email = ?",
@@ -25,7 +26,7 @@ export async function createEmployeeAccount(req: Request, res: Response) {
       return res.status(409).json({ message: "Email already registered" });
     }
 
-    const password_hash = await bcrypt.hash(temporary_password, 10);
+    const password_hash = await bcrypt.hash(temporary_password, BCRYPT_SALT_ROUNDS);
 
     const [result] = await pool.query<ResultSetHeader>(
       "INSERT INTO users (full_name, email, password_hash, role) VALUES (?, ?, ?, ?)",
@@ -63,7 +64,7 @@ export async function resetEmployeePassword(req: Request, res: Response) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const password_hash = await bcrypt.hash(temporary_password, 10);
+    const password_hash = await bcrypt.hash(temporary_password, BCRYPT_SALT_ROUNDS);
     await pool.query("UPDATE users SET password_hash = ? WHERE id = ?", [
       password_hash,
       user_id,

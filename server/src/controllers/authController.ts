@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import type { Request, Response } from "express";
 import type { RowDataPacket } from "mysql2";
 import pool from "../config/db.js";
+import { BCRYPT_SALT_ROUNDS } from "../constants.js";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 const JWT_EXPIRES_IN = "30m";
@@ -136,7 +137,7 @@ export async function changePassword(req: Request, res: Response) {
       return res.status(401).json({ message: "Current password is incorrect" });
     }
 
-    const password_hash = await bcrypt.hash(new_password, 10);
+    const password_hash = await bcrypt.hash(new_password, BCRYPT_SALT_ROUNDS);
     await pool.query("UPDATE users SET password_hash = ? WHERE id = ?", [
       password_hash,
       req.user!.id,

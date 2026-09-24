@@ -4,6 +4,7 @@ import {
   resetEmployeePassword,
 } from "../controllers/adminController.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { ROLES } from "../constants.js";
 
 const router = express.Router();
 
@@ -14,14 +15,14 @@ const router = express.Router();
 router.post(
   "/employees",
   requireAuth,
-  requireRole("administrator"),
+  requireRole(ROLES.ADMINISTRATOR),
   createEmployeeAccount,
 );
 
 router.post(
   "/employees/reset-password",
   requireAuth,
-  requireRole("administrator"),
+  requireRole(ROLES.ADMINISTRATOR),
   resetEmployeePassword,
 );
 

@@ -22,11 +22,12 @@ import {
 } from "../controllers/documentController.js";
 
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { ROLES } from "../constants.js";
 import upload from "../middleware/upload.js";
 
 const router = express.Router();
 
-router.get("/", requireAuth, requireRole("administrator"), getAllAssets);
+router.get("/", requireAuth, requireRole(ROLES.ADMINISTRATOR), getAllAssets);
 
 router.get("/mine", requireAuth, getMyAssignedAssets);
 
@@ -40,25 +41,25 @@ router.get("/my-acknowledgements", requireAuth, getMyAcknowledgements);
 
 router.get("/acknowledgements/:id", requireAuth, getAcknowledgementById);
 
-router.get("/stats", requireAuth, requireRole("administrator"), getAssetStats);
+router.get("/stats", requireAuth, requireRole(ROLES.ADMINISTRATOR), getAssetStats);
 
 router.get("/:id", requireAuth, getAssetById);
 
-router.post("/", requireAuth, requireRole("administrator"), createAsset);
+router.post("/", requireAuth, requireRole(ROLES.ADMINISTRATOR), createAsset);
 
-router.put("/:id", requireAuth, requireRole("administrator"), updateAsset);
+router.put("/:id", requireAuth, requireRole(ROLES.ADMINISTRATOR), updateAsset);
 
 router.post(
   "/:id/retire",
   requireAuth,
-  requireRole("administrator"),
+  requireRole(ROLES.ADMINISTRATOR),
   retireAsset,
 );
 
 router.post(
   "/:id/dispose",
   requireAuth,
-  requireRole("administrator"),
+  requireRole(ROLES.ADMINISTRATOR),
   disposeAsset,
 );
 
@@ -70,7 +71,7 @@ router.patch("/:id/usage-state", requireAuth, setUsageState);
 router.post(
   "/:asset_id/documents",
   requireAuth,
-  requireRole("administrator"),
+  requireRole(ROLES.ADMINISTRATOR),
   upload.single("file"),
   uploadDocument,
 );
@@ -78,7 +79,7 @@ router.post(
 router.get(
   "/:asset_id/documents",
   requireAuth,
-  requireRole("administrator"),
+  requireRole(ROLES.ADMINISTRATOR),
   getDocumentsForAsset,
 );
 

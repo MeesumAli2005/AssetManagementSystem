@@ -13,6 +13,7 @@ import { uploadDocument, downloadDocument } from "../api/documents";
 import StatusBadge from "../components/StatusBadge";
 import Modal from "../components/Modal";
 import { useAuth } from "../context/AuthContext";
+import { ASSET_CONDITIONS, ROLES } from "../constants";
 import { formatCurrency } from "../utils/format";
 import type { AssetCondition, AssetDetail as AssetDetailData, AssetStatus } from "../types";
 import { getErrorMessage } from "../utils/errors";
@@ -21,7 +22,6 @@ import { getErrorMessage } from "../utils/errors";
 // entirely on the employee's page (Assign asset panel), so it's excluded
 // from this list. See EDITABLE_STATUSES vs. STATUS_COLORS below.
 const EDITABLE_STATUSES: AssetStatus[] = ["available", "under_repair", "retired"];
-const CONDITIONS: AssetCondition[] = ["new", "good", "fair", "damaged"];
 const DOCUMENT_TYPES: ("receipt" | "repair_record" | "other")[] = [
   "receipt",
   "repair_record",
@@ -40,7 +40,7 @@ export default function AssetDetail() {
   const { id } = useParams();
   const assetId = Number(id);
   const { user } = useAuth();
-  const isAdmin = user?.role === "administrator";
+  const isAdmin = user?.role === ROLES.ADMINISTRATOR;
 
   const [asset, setAsset] = useState<AssetDetailData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -362,7 +362,7 @@ export default function AssetDetail() {
                 }
                 className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {CONDITIONS.map((c) => (
+                {ASSET_CONDITIONS.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>

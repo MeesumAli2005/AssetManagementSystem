@@ -10,6 +10,7 @@ import {
 } from "../controllers/categoryController.js";
 
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { ROLES } from "../constants.js";
 
 const router = express.Router();
 
@@ -17,28 +18,28 @@ router.get("/", requireAuth, getAllCategories);
 
 router.get("/:id", requireAuth, getCategoryById);
 
-router.post("/", requireAuth, requireRole("administrator"), createCategory);
+router.post("/", requireAuth, requireRole(ROLES.ADMINISTRATOR), createCategory);
 
-router.put("/:id", requireAuth, requireRole("administrator"), updateCategory);
+router.put("/:id", requireAuth, requireRole(ROLES.ADMINISTRATOR), updateCategory);
 
 router.delete(
   "/:id",
   requireAuth,
-  requireRole("administrator"),
+  requireRole(ROLES.ADMINISTRATOR),
   deleteCategory,
 );
 
 router.post(
   "/:id/specs",
   requireAuth,
-  requireRole("administrator"),
+  requireRole(ROLES.ADMINISTRATOR),
   addSpecToCategory,
 );
 
 router.delete(
   "/specs/:specId",
   requireAuth,
-  requireRole("administrator"),
+  requireRole(ROLES.ADMINISTRATOR),
   deleteSpec,
 );
 

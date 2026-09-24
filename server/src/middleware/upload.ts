@@ -2,6 +2,7 @@
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { MAX_UPLOAD_BYTES } from "../constants.js";
 
 const uploadDir = "uploads/asset-documents";
 
@@ -29,7 +30,7 @@ export class FileTypeError extends Error {}
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: MAX_UPLOAD_BYTES },
   fileFilter: (req, file, cb) => {
     const allowedTypes = [".pdf", ".png", ".jpg", ".jpeg"];
     const ext = path.extname(file.originalname).toLowerCase();

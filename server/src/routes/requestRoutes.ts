@@ -14,6 +14,7 @@ import {
 } from "../controllers/requestController.js";
 
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { ROLES } from "../constants.js";
 
 const router = express.Router();
 
@@ -21,28 +22,28 @@ router.post("/", requireAuth, createRequest);
 
 router.get("/mine", requireAuth, getMyRequests);
 
-router.get("/", requireAuth, requireRole("administrator"), getAllRequests);
+router.get("/", requireAuth, requireRole(ROLES.ADMINISTRATOR), getAllRequests);
 
 router.get("/:id", requireAuth, getRequestById);
 
 router.post(
   "/:id/notes",
   requireAuth,
-  requireRole("administrator"),
+  requireRole(ROLES.ADMINISTRATOR),
   addRequestNote,
 );
 
 router.patch(
   "/:id/review",
   requireAuth,
-  requireRole("administrator"),
+  requireRole(ROLES.ADMINISTRATOR),
   reviewRequest,
 );
 
 router.patch(
   "/:id/complete-return",
   requireAuth,
-  requireRole("administrator"),
+  requireRole(ROLES.ADMINISTRATOR),
   completeReturn,
 );
 
@@ -51,14 +52,14 @@ router.patch("/:id/acknowledge-return", requireAuth, acknowledgeReturn);
 router.patch(
   "/:id/complete-repair",
   requireAuth,
-  requireRole("administrator"),
+  requireRole(ROLES.ADMINISTRATOR),
   completeRepair,
 );
 
 router.post(
   "/:id/assign",
   requireAuth,
-  requireRole("administrator"),
+  requireRole(ROLES.ADMINISTRATOR),
   assignAssetToRequest,
 );
 

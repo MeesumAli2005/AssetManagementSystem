@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import api from "../api/axios";
 import type { AuthResponse, User } from "../types";
+import { TOKEN_KEY, USER_KEY } from "../constants";
 
 interface AuthContextValue {
   user: User | null;
@@ -18,7 +19,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
-    const stored = localStorage.getItem("user");
+    const stored = localStorage.getItem(USER_KEY);
     return stored ? JSON.parse(stored) : null;
   });
 
@@ -29,8 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const { token, user } = response.data;
 
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
     setUser(user);
 
     return user;
@@ -48,8 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await api.post("/auth/logout");
     } catch {}
 
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
     setUser(null);
   }
 

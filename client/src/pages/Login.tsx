@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { ROLES } from "../constants";
 import { getErrorMessage } from "../utils/errors";
 
 export default function Login() {
@@ -20,7 +21,7 @@ export default function Login() {
 
     try {
       const user = await login(email, password);
-      if (user.role === "administrator") {
+      if (user.role === ROLES.ADMINISTRATOR) {
         navigate("/admin");
       } else {
         navigate("/employee");

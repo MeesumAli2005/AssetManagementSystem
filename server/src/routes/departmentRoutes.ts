@@ -7,6 +7,7 @@ import {
 } from "../controllers/departmentController.js";
 
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { ROLES } from "../constants.js";
 
 const router = express.Router();
 
@@ -14,12 +15,12 @@ const router = express.Router();
 router.get("/", requireAuth, getAllDepartments);
 
 // Only admins can CREATE, UPDATE, or DELETE departments
-router.post("/", requireAuth, requireRole("administrator"), createDepartment);
-router.put("/:id", requireAuth, requireRole("administrator"), updateDepartment);
+router.post("/", requireAuth, requireRole(ROLES.ADMINISTRATOR), createDepartment);
+router.put("/:id", requireAuth, requireRole(ROLES.ADMINISTRATOR), updateDepartment);
 router.delete(
   "/:id",
   requireAuth,
-  requireRole("administrator"),
+  requireRole(ROLES.ADMINISTRATOR),
   deleteDepartment,
 );
 

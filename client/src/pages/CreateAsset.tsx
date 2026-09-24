@@ -6,8 +6,8 @@ import { createAsset } from "../api/assets";
 import { getAllCategories } from "../api/categories";
 import type { AssetCondition, Category } from "../types";
 import { getErrorMessage } from "../utils/errors";
+import { ASSET_CONDITIONS } from "../constants";
 
-const CONDITIONS: AssetCondition[] = ["new", "good", "fair", "damaged"];
 
 export default function CreateAsset() {
   const navigate = useNavigate();
@@ -160,7 +160,7 @@ export default function CreateAsset() {
             onChange={(e) => setCondition(e.target.value as AssetCondition)}
             className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
           >
-            {CONDITIONS.map((c) => (
+            {ASSET_CONDITIONS.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>

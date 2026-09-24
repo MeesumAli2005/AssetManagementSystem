@@ -3,14 +3,11 @@ import type { Request, Response } from "express";
 import type { PoolConnection, RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import pool from "../config/db.js";
 import { getErrorMessage } from "../utils/errors.js";
+import { ASSET_CONDITIONS, ROLES, USAGE_STATES } from "../constants.js";
 
 //valid statuses for a given asset
 
 const VALID_STATUSES = ["available", "assigned", "under_repair", "retired"];
-
-export const VALID_CONDITIONS = ["new", "good", "fair", "damaged"];
-
-const VALID_USAGE_STATES = ["active", "dormant"];
 
 interface SpecValueInput {
   category_spec_id: number;
@@ -138,9 +135,9 @@ export async function createAsset(req: Request, res: Response) {
       return res.status(400).json({ message: "category_id is required" });
     }
 
-    if (condition && !VALID_CONDITIONS.includes(condition)) {
+    if (condition && !ASSET_CONDITIONS.includes(condition)) {
       return res.status(400).json({
-        message: `condition must be one of: ${VALID_CONDITIONS.join(", ")}`,
+        message: `condition must be one of: ${ASSET_CONDITIONS.join(", ")}`,
       });
     }
 
@@ -394,7 +391,7 @@ export async function getAssetById(req: Request, res: Response) {
     // endpoint would leak every other employee's assignment history and
     // purchase cost. asset_assignments (any row, active or not) is the
     // source of truth for "had this asset at some point".
-    if (req.user!.role !== "administrator") {
+    if (req.user!.role !== ROLES.ADMINISTRATOR) {
       const [assignmentRows] = await pool.query<RowDataPacket[]>(
         `SELECT id AS assignment_id, acknowledged_at, assigned_at, is_active
                 FROM asset_assignments WHERE asset_id = ? AND employee_id = ? ORDER BY assigned_at DESC`,
@@ -425,7 +422,7 @@ export async function getAssetById(req: Request, res: Response) {
     // those [assigned_at, returned_at-or-now) windows. Not the full
     // audit trail — just "what happened while I had it".
     let history;
-    if (req.user!.role === "administrator") {
+    if (req.user!.role === ROLES.ADMINISTRATOR) {
       const historyResult = await pool.query<RowDataPacket[]>(
         `SELECT
                     h.*,
@@ -534,9 +531,9 @@ export async function updateAsset(req: Request, res: Response) {
       });
     }
 
-    if (condition && !VALID_CONDITIONS.includes(condition)) {
+    if (condition && !ASSET_CONDITIONS.includes(condition)) {
       return res.status(400).json({
-        message: `condition must be one of: ${VALID_CONDITIONS.join(", ")}`,
+        message: `condition must be one of: ${ASSET_CONDITIONS.join(", ")}`,
       });
     }
 
@@ -1118,9 +1115,9 @@ export async function setUsageState(req: Request, res: Response) {
     const { usage_state } = req.body;
     const myId = req.user!.id;
 
-    if (!VALID_USAGE_STATES.includes(usage_state)) {
+    if (!USAGE_STATES.includes(usage_state)) {
       return res.status(400).json({
-        message: `usage_state must be one of: ${VALID_USAGE_STATES.join(", ")}`,
+        message: `usage_state must be one of: ${USAGE_STATES.join(", ")}`,
       });
     }
 

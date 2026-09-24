@@ -1,10 +1,11 @@
 import { Navigate, Outlet } from "react-router-dom";
+import { ROLES, type Role } from "../constants";
 import { useAuth } from "../context/AuthContext";
 
 export default function ProtectedRoute({
   allowedRoles,
 }: {
-  allowedRoles?: string[];
+  allowedRoles?: Role[];
 }) {
   const { user } = useAuth();
 
@@ -15,7 +16,7 @@ export default function ProtectedRoute({
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return (
       <Navigate
-        to={user.role === "administrator" ? "/admin" : "/employee"}
+        to={user.role === ROLES.ADMINISTRATOR ? "/admin" : "/employee"}
         replace
       />
     );

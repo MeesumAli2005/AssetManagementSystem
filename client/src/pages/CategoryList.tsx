@@ -10,6 +10,7 @@ import {
 import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useAuth } from "../context/AuthContext";
+import { ROLES } from "../constants";
 import type { Category } from "../types";
 import { getErrorMessage } from "../utils/errors";
 
@@ -22,7 +23,7 @@ const SPEC_TYPES: NewSpec["spec_type"][] = [
 
 export default function CategoryList() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "administrator";
+  const isAdmin = user?.role === ROLES.ADMINISTRATOR;
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);

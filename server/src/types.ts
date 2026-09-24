@@ -1,3 +1,5 @@
+import type { Role } from "./constants.js";
+
 // Shared server-side types. Grown as controllers get converted — start
 // with just what auth.js needs.
 
@@ -7,5 +9,5 @@
 export interface AuthenticatedUser {
   id: number;
   email: string;
-  role: "employee" | "administrator";
+  role: Role;
 }

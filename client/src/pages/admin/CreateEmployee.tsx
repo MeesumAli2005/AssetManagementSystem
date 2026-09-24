@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { createEmployee } from "../../api/employees";
 import PasswordInput from "../../components/PasswordInput";
 import { getErrorMessage } from "../../utils/errors";
+import { ROLES, type Role } from "../../constants";
 
 export default function CreateEmployee() {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ export default function CreateEmployee() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [temporaryPassword, setTemporaryPassword] = useState("");
-  const [role, setRole] = useState<"employee" | "administrator">("employee");
+  const [role, setRole] = useState<Role>(ROLES.EMPLOYEE);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -93,12 +94,12 @@ export default function CreateEmployee() {
           <select
             value={role}
             onChange={(event) =>
-              setRole(event.target.value as "employee" | "administrator")
+              setRole(event.target.value as Role)
             }
             className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-base text-zinc-100 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
           >
-            <option value="employee">Employee</option>
-            <option value="administrator">Administrator</option>
+            <option value={ROLES.EMPLOYEE}>Employee</option>
+            <option value={ROLES.ADMINISTRATOR}>Administrator</option>
           </select>
         </div>
 

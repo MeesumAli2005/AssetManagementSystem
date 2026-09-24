@@ -9,12 +9,13 @@
 //     configure it to, and db.js doesn't.
 //   - decimal(10,2) columns (purchase_cost) come back as `string`, not
 //     `number` — mysql2's default, to avoid float rounding on money.
+import type { Role } from "./constants";
 
 export interface User {
   id: number;
   full_name: string | null;
   email: string;
-  role: "employee" | "administrator";
+  role: Role;
 }
 
 export interface AuthResponse {
@@ -177,7 +178,7 @@ export interface MyProfile {
   id: number;
   full_name: string | null;
   email: string;
-  role: "employee" | "administrator";
+  role: Role;
   is_active: number;
   created_at: string;
   updated_at: string;
@@ -196,7 +197,7 @@ export interface Employee {
   id: number;
   full_name: string | null;
   email: string;
-  role: "employee" | "administrator";
+  role: Role;
   is_active: number;
   created_at: string;
   departments: { id: number; name: string }[];

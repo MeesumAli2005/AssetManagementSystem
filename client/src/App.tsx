@@ -4,6 +4,7 @@ import CategoryList from "./pages/CategoryList";
 import AssetList from "./pages/AssetList";
 import AssetDetail from "./pages/AssetDetail";
 import CreateAsset from "./pages/CreateAsset";
+import { ROLES } from "./constants";
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
@@ -71,7 +72,7 @@ export default function App() {
 
           <Route
             element={
-              <ProtectedRoute allowedRoles={["employee", "administrator"]} />
+              <ProtectedRoute allowedRoles={[ROLES.EMPLOYEE, ROLES.ADMINISTRATOR]} />
             }
           >
             <Route element={<Layout />}>
@@ -85,7 +86,7 @@ export default function App() {
           {/*<Route path="/signup" element={<Signup />} /> */}
 
           {/* Employee-only routes, wrapped in the shared sidebar/topbar Layout */}
-          <Route element={<ProtectedRoute allowedRoles={["employee"]} />}>
+          <Route element={<ProtectedRoute allowedRoles={[ROLES.EMPLOYEE]} />}>
             <Route element={<Layout />}>
               <Route path="/employee" element={<EmployeeDashboard />} />
               <Route path="/employee/my-assets" element={<MyAssets />} />
@@ -107,7 +108,7 @@ export default function App() {
           </Route>
 
           {/* Admin-only routes, wrapped in the shared sidebar/topbar Layout */}
-          <Route element={<ProtectedRoute allowedRoles={["administrator"]} />}>
+          <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMINISTRATOR]} />}>
             <Route element={<Layout />}>
               <Route path="/admin" element={<AdminDashboard />} />
 

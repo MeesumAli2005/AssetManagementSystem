@@ -4,8 +4,8 @@ import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import pool from "../config/db.js";
 import { recordAssignmentEvent } from "./assetController.js";
 import { getErrorMessage } from "../utils/errors.js";
+import { REQUEST_TYPES, ROLES } from "../constants.js";
 
-const REQUEST_TYPES = ["asset", "return", "repair"];
 
 // repair_details is the admin's private diagnosis/plan note, set when
 // approving a repair — never shown to the employee. Strip it before any
@@ -254,13 +254,13 @@ export async function getRequestById(req: Request, res: Response) {
     }
 
     if (
-      req.user!.role !== "administrator" &&
+      req.user!.role !== ROLES.ADMINISTRATOR &&
       rows[0]!.employee_id !== req.user!.id
     ) {
       return res.status(403).json({ message: "This is not your request" });
     }
 
-    if (req.user!.role !== "administrator") {
+    if (req.user!.role !== ROLES.ADMINISTRATOR) {
       return res.json(stripPrivateFields(rows[0]!));
     }
 
