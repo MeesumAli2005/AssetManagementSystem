@@ -25,14 +25,24 @@ export async function uploadDocument(
   return response.data;
 }
 
-// server.js serves /api/uploads behind requireAuth, so a plain <a href> tab
-// open won't carry the JWT — fetch it through axios (which does attach the
-// header via the interceptor) as a blob, then open that instead.
-export async function downloadDocument(fileUrl: string) {
-  const response = await api.get<Blob>(fileUrl, {
+// Two steps: mint a one-time link for this exact document, then fetch it
+// immediately. The link only works once, ever — copying the URL out and
+// opening it anywhere else (a different browser, a different admin) fails,
+// because whichever request lands first consumes it. It's also still
+// behind requireAuth (admin only) on top of that.
+//
+// The fetch itself goes through axios rather than a plain <a href>/
+// window.open on the URL directly, so the JWT actually gets attached (the
+// axios interceptor does that; a bare browser navigation wouldn't).
+export async function viewDocument(assetId: number, docId: number) {
+  const linkResponse = await api.post<{ url: string }>(
+    `/assets/${assetId}/documents/${docId}/link`,
+  );
+
+  const fileResponse = await api.get<Blob>(linkResponse.data.url, {
     baseURL: api.defaults.baseURL!.replace(/\/api$/, ""),
     responseType: "blob",
   });
-  const blobUrl = URL.createObjectURL(response.data);
+  const blobUrl = URL.createObjectURL(fileResponse.data);
   window.open(blobUrl, "_blank");
 }

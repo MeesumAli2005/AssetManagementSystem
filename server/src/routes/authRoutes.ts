@@ -1,4 +1,5 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import {
   login,
   logout,
@@ -8,9 +9,20 @@ import { requireAuth, requireAuthOptional } from "../middleware/auth.js";
 
 const router = express.Router();
 
+// Caps attempts per IP, not per account — an account-based limit could be
+// abused by an outsider to lock a real user out just by repeatedly failing
+// their email.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many login attempts. Try again in a few minutes." },
+});
+
 //router.post('/signup', signup);
 
-router.post("/login", login);
+router.post("/login", loginLimiter, login);
 
 router.post("/logout", requireAuthOptional, logout);
 

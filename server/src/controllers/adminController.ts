@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import type { Request, Response } from "express";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
 import pool from "../config/db.js";
-import { BCRYPT_SALT_ROUNDS, ROLES } from "../constants.js";
+import { BCRYPT_SALT_ROUNDS, MIN_PASSWORD_LENGTH, ROLES } from "../constants.js";
 
 export async function createEmployeeAccount(req: Request, res: Response) {
   try {
@@ -13,6 +13,12 @@ export async function createEmployeeAccount(req: Request, res: Response) {
       return res
         .status(400)
         .json({ message: "Email and temporary password are required" });
+    }
+
+    if (temporary_password.length < MIN_PASSWORD_LENGTH) {
+      return res.status(400).json({
+        message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
+      });
     }
 
     const allowedRoles: string[] = Object.values(ROLES);
@@ -54,6 +60,12 @@ export async function resetEmployeePassword(req: Request, res: Response) {
       return res
         .status(400)
         .json({ message: "user_id and temporary_password are required" });
+    }
+
+    if (temporary_password.length < MIN_PASSWORD_LENGTH) {
+      return res.status(400).json({
+        message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
+      });
     }
 
     const [rows] = await pool.query<RowDataPacket[]>(

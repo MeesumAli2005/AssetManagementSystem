@@ -19,6 +19,7 @@ import {
 import {
   uploadDocument,
   getDocumentsForAsset,
+  createDocumentAccessLink,
 } from "../controllers/documentController.js";
 
 import { requireAuth, requireRole } from "../middleware/auth.js";
@@ -81,6 +82,15 @@ router.get(
   requireAuth,
   requireRole(ROLES.ADMINISTRATOR),
   getDocumentsForAsset,
+);
+
+// mints a one-time link for viewing a single document — see
+// documentController.createDocumentAccessLink / serveOneTimeDocument
+router.post(
+  "/:asset_id/documents/:doc_id/link",
+  requireAuth,
+  requireRole(ROLES.ADMINISTRATOR),
+  createDocumentAccessLink,
 );
 
 export default router;

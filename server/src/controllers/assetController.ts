@@ -2,7 +2,6 @@
 import type { Request, Response } from "express";
 import type { PoolConnection, RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import pool from "../config/db.js";
-import { getErrorMessage } from "../utils/errors.js";
 import { ASSET_CONDITIONS, ROLES, USAGE_STATES } from "../constants.js";
 
 //valid statuses for a given asset
@@ -202,7 +201,7 @@ export async function createAsset(req: Request, res: Response) {
     console.error(err);
     return res
       .status(400)
-      .json({ message: getErrorMessage(err, "Server error creating asset") });
+      .json({ message: "Server error creating asset" });
   } finally {
     connection.release();
   }
@@ -465,15 +464,22 @@ export async function getAssetById(req: Request, res: Response) {
       history = historyResult[0];
     }
 
-    //asset docs
-    const [documents] = await pool.query<RowDataPacket[]>(
-      `SELECT d.*, u.full_name AS uploaded_by_name
-        FROM asset_documents d
-        LEFT JOIN users u ON d.uploaded_by = u.id
-        WHERE d.asset_id = ?
-        ORDER BY d.created_at DESC`,
-      [id],
-    );
+    // asset docs — admin-only. Employees never get these back at all, not
+    // even metadata, since document contents themselves are only ever
+    // reachable through an admin-minted one-time link (documentController.ts).
+    let documents: RowDataPacket[] = [];
+    if (req.user!.role === ROLES.ADMINISTRATOR) {
+      const documentsResult = await pool.query<RowDataPacket[]>(
+        `SELECT d.id, d.asset_id, d.document_type, d.uploaded_by, d.created_at,
+                u.full_name AS uploaded_by_name
+          FROM asset_documents d
+          LEFT JOIN users u ON d.uploaded_by = u.id
+          WHERE d.asset_id = ?
+          ORDER BY d.created_at DESC`,
+        [id],
+      );
+      documents = documentsResult[0];
+    }
 
     const [specValues] = await pool.query<RowDataPacket[]>(
       `SELECT sv.id, sv.category_spec_id, sv.value, cs.spec_name, cs.spec_type
@@ -722,7 +728,7 @@ export async function updateAsset(req: Request, res: Response) {
     console.error(err);
     return res
       .status(400)
-      .json({ message: getErrorMessage(err, "Server error updating asset") });
+      .json({ message: "Server error updating asset" });
   } finally {
     connection.release();
   }
@@ -1166,7 +1172,7 @@ export async function setUsageState(req: Request, res: Response) {
     await connection.rollback();
     console.error(error);
     return res.status(400).json({
-      message: getErrorMessage(error, "Server error updating usage state"),
+      message: "Server error updating usage state",
     });
   } finally {
     connection.release();

@@ -2,6 +2,7 @@
 import "./src/config/validateEnv.js"; // must run before db.ts (imported via router below) creates the pool
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import dotenv from "dotenv";
 import multer from "multer";
 import swaggerUi from "swagger-ui-express";
@@ -16,12 +17,19 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
+app.use(helmet());
+// Only our own client should be allowed to call this API from a browser —
+// falls back to the client's default dev/compose port if unset.
+app.use(cors({ origin: process.env.CORS_ORIGIN || "http://localhost:5173" }));
 app.use(express.json());
 app.use("/api", router);
 
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.get("/api-docs.json", (req, res) => res.json(swaggerSpec)); 
+// Hands out a full map of every endpoint — fine for local development,
+// not something to leave open on a real deployment.
+if (process.env.NODE_ENV !== "production") {
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  app.get("/api-docs.json", (req, res) => res.json(swaggerSpec));
+}
 
 app.get("/", (req, res) => res.json({ status: "API running" }));
 

@@ -3,7 +3,6 @@ import type { Request, Response } from "express";
 import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import pool from "../config/db.js";
 import { recordAssignmentEvent } from "./assetController.js";
-import { getErrorMessage } from "../utils/errors.js";
 import { REQUEST_TYPES, ROLES } from "../constants.js";
 
 
@@ -468,7 +467,7 @@ export async function reviewRequest(req: Request, res: Response) {
     console.error(err);
     return res
       .status(400)
-      .json({ message: getErrorMessage(err, "Server error reviewing request") });
+      .json({ message: "Server error reviewing request" });
   } finally {
     connection.release();
   }
@@ -569,10 +568,7 @@ export async function assignAssetToRequest(req: Request, res: Response) {
     await connection.rollback();
     console.error(err);
     return res.status(400).json({
-      message: getErrorMessage(
-        err,
-        "Server error assigning asset to request",
-      ),
+      message: "Server error assigning asset to request",
     });
   } finally {
     connection.release();
@@ -637,7 +633,7 @@ export async function completeReturn(req: Request, res: Response) {
     console.error(err);
     return res
       .status(400)
-      .json({ message: getErrorMessage(err, "Server error completing return") });
+      .json({ message: "Server error completing return" });
   } finally {
     connection.release();
   }
@@ -697,7 +693,7 @@ export async function acknowledgeReturn(req: Request, res: Response) {
     await connection.rollback();
     console.error(err);
     return res.status(400).json({
-      message: getErrorMessage(err, "Server error acknowledging return"),
+      message: "Server error acknowledging return",
     });
   } finally {
     connection.release();
@@ -797,7 +793,7 @@ export async function completeRepair(req: Request, res: Response) {
     console.error(err);
     return res
       .status(400)
-      .json({ message: getErrorMessage(err, "Server error completing repair") });
+      .json({ message: "Server error completing repair" });
   } finally {
     connection.release();
   }

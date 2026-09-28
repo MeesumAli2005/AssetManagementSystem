@@ -100,7 +100,8 @@ export interface AssetDocument {
   id: number;
   asset_id: number;
   document_type: "receipt" | "repair_record" | "other";
-  file_url: string | null;
+  // no file_url — a document is only ever reachable through a one-time
+  // link minted on demand (see api/documents.ts's viewDocument)
   uploaded_by: number | null;
   uploaded_by_name: string | null;
   created_at: string;

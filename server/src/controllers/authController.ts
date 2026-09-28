@@ -4,10 +4,19 @@ import jwt from "jsonwebtoken";
 import type { Request, Response } from "express";
 import type { RowDataPacket } from "mysql2";
 import pool from "../config/db.js";
-import { BCRYPT_SALT_ROUNDS } from "../constants.js";
+import { BCRYPT_SALT_ROUNDS, MIN_PASSWORD_LENGTH } from "../constants.js";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 const JWT_EXPIRES_IN = "30m";
+
+// Compared against when no user matches the given email, so a login attempt
+// against a nonexistent account still does real bcrypt work — the point is
+// keeping "no such account" and "wrong password" indistinguishable, both in
+// the response and in how long the response takes to come back.
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(
+  "not-a-real-password",
+  BCRYPT_SALT_ROUNDS,
+);
 
 // export async function signup(req, res) {
 //   try {
@@ -58,17 +67,23 @@ export async function login(req: Request, res: Response) {
     );
     const user = rows[0];
 
-    if (!user) {
+    // Same password check either way (against a dummy hash if there's no
+    // such user), and the same generic error for both — a wrong password
+    // and a nonexistent email must be indistinguishable from the outside.
+    // is_active is only ever checked *after* proving the password is
+    // right, so a login attempt with a wrong password can't be used to
+    // discover whether some other account is deactivated.
+    const passwordMatches = await bcrypt.compare(
+      password,
+      user ? user.password_hash : DUMMY_PASSWORD_HASH,
+    );
+
+    if (!user || !passwordMatches) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
     if (!user.is_active) {
       return res.status(403).json({ message: "Account is deactivated" });
-    }
-
-    const passwordMatches = await bcrypt.compare(password, user.password_hash);
-    if (!passwordMatches) {
-      return res.status(401).json({ message: "Invalid email or password" });
     }
 
     const token = jwt.sign(
@@ -116,6 +131,12 @@ export async function changePassword(req: Request, res: Response) {
       return res
         .status(400)
         .json({ message: "New password and confirmation do not match" });
+    }
+
+    if (new_password.length < MIN_PASSWORD_LENGTH) {
+      return res.status(400).json({
+        message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
+      });
     }
 
     // req.user comes from the JWT payload set by requireAuth middleware

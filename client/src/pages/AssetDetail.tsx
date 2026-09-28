@@ -9,7 +9,7 @@ import {
   disposeAsset,
   acknowledgeAssignment,
 } from "../api/assets";
-import { uploadDocument, downloadDocument } from "../api/documents";
+import { uploadDocument, viewDocument } from "../api/documents";
 import StatusBadge from "../components/StatusBadge";
 import Modal from "../components/Modal";
 import { useAuth } from "../context/AuthContext";
@@ -416,42 +416,44 @@ export default function AssetDetail() {
         </>
       )}
 
-      {/* Documents */}
-      <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-base font-medium text-zinc-300">Documents</p>
-          {isAdmin && (
+      {/* Documents — admin-only, both this section and the data behind it:
+          the server never even sends `documents` to an employee (see
+          assetController.getAssetById), so this isn't just a UI hide. */}
+      {isAdmin && (
+        <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-base font-medium text-zinc-300">Documents</p>
             <button
               onClick={() => setUploadOpen(true)}
               className="text-sm font-medium text-emerald-400 hover:text-emerald-300"
             >
               + Upload
             </button>
+          </div>
+          {asset.documents.length === 0 ? (
+            <p className="text-base text-zinc-500">No documents uploaded.</p>
+          ) : (
+            <ul className="space-y-2">
+              {asset.documents.map((doc) => (
+                <li
+                  key={doc.id}
+                  className="flex items-center justify-between text-base"
+                >
+                  <span className="capitalize text-zinc-300">
+                    {doc.document_type.replace("_", " ")}
+                  </span>
+                  <button
+                    onClick={() => viewDocument(assetId, doc.id)}
+                    className="font-medium text-emerald-400 hover:text-emerald-300"
+                  >
+                    View
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
-        {asset.documents.length === 0 ? (
-          <p className="text-base text-zinc-500">No documents uploaded.</p>
-        ) : (
-          <ul className="space-y-2">
-            {asset.documents.map((doc) => (
-              <li
-                key={doc.id}
-                className="flex items-center justify-between text-base"
-              >
-                <span className="capitalize text-zinc-300">
-                  {doc.document_type.replace("_", " ")}
-                </span>
-                <button
-                  onClick={() => doc.file_url && downloadDocument(doc.file_url)}
-                  className="font-medium text-emerald-400 hover:text-emerald-300"
-                >
-                  View
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      )}
 
       {/* History — admins see everything; employees see only what happened
           during their own assignment window(s), scoped server-side */}
