@@ -1,4 +1,5 @@
 // entry point for any express app is the server.js file, this wires up all the routes and the error handler
+import "./src/config/validateEnv.js"; // must run before db.ts (imported via router below) creates the pool
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
