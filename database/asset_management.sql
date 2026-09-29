@@ -1,3 +1,13 @@
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 DROP TABLE IF EXISTS `asset_assignments`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -11,10 +21,13 @@ CREATE TABLE `asset_assignments` (
   `acknowledged_at` timestamp NULL DEFAULT NULL,
   `returned_at` timestamp NULL DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT '1',
+  `active_asset_id` int GENERATED ALWAYS AS (if((`is_active` = 1),`asset_id`,NULL)) STORED,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_one_active_assignment` (`active_asset_id`),
   KEY `fk_assignments_asset` (`asset_id`),
   KEY `fk_assignments_employee` (`employee_id`),
   KEY `fk_assignments_admin` (`assigned_by`),
+  KEY `idx_assignments_asset_active` (`asset_id`,`is_active`),
   CONSTRAINT `fk_assignments_admin` FOREIGN KEY (`assigned_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_assignments_asset` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_assignments_employee` FOREIGN KEY (`employee_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
@@ -27,7 +40,7 @@ CREATE TABLE `asset_assignments` (
 
 LOCK TABLES `asset_assignments` WRITE;
 /*!40000 ALTER TABLE `asset_assignments` DISABLE KEYS */;
-INSERT INTO `asset_assignments` VALUES (1,10,13,7,'2026-08-18 11:13:14','2026-08-18 11:13:23','2026-08-18 11:13:31',0),(2,10,11,7,'2026-08-18 11:13:31',NULL,'2026-08-18 11:13:36',0),(3,10,11,7,'2026-08-18 11:23:53',NULL,'2026-08-18 11:24:12',0),(4,10,13,7,'2026-08-19 14:07:43',NULL,'2026-08-19 14:08:09',0),(6,10,13,7,'2026-08-19 14:09:08',NULL,'2026-08-19 14:09:16',0),(7,12,12,7,'2026-08-19 14:56:30','2026-08-19 15:09:44','2026-08-20 12:48:55',0),(8,10,13,7,'2026-08-19 15:03:03',NULL,'2026-08-19 15:03:03',0),(9,10,13,7,'2026-08-19 15:16:12',NULL,'2026-08-19 15:16:29',0),(10,10,13,7,'2026-08-19 15:27:23',NULL,NULL,1),(11,8,13,7,'2026-08-19 15:27:29',NULL,NULL,1),(16,13,12,7,'2026-08-20 12:46:49','2026-08-20 12:47:56',NULL,1),(17,12,12,7,'2026-08-20 12:48:55','2026-08-20 13:59:49',NULL,1),(18,7,12,7,'2026-08-20 13:59:15','2026-08-20 13:59:48','2026-08-24 06:56:56',0),(21,7,12,7,'2026-08-24 07:35:38','2026-08-24 08:01:20',NULL,1),(23,28,23,7,'2026-08-27 07:28:51','2026-08-27 08:10:35',NULL,1),(24,30,13,7,'2026-08-28 10:36:00',NULL,NULL,1),(25,29,12,7,'2026-08-28 10:49:25','2026-08-28 10:54:22',NULL,1);
+INSERT INTO `asset_assignments` (`id`,`asset_id`,`employee_id`,`assigned_by`,`assigned_at`,`acknowledged_at`,`returned_at`,`is_active`) VALUES (1,10,13,7,'2026-08-18 11:13:14','2026-08-18 11:13:23','2026-08-18 11:13:31',0),(2,10,11,7,'2026-08-18 11:13:31',NULL,'2026-08-18 11:13:36',0),(3,10,11,7,'2026-08-18 11:23:53',NULL,'2026-08-18 11:24:12',0),(4,10,13,7,'2026-08-19 14:07:43',NULL,'2026-08-19 14:08:09',0),(6,10,13,7,'2026-08-19 14:09:08',NULL,'2026-08-19 14:09:16',0),(7,12,12,7,'2026-08-19 14:56:30','2026-08-19 15:09:44','2026-08-20 12:48:55',0),(8,10,13,7,'2026-08-19 15:03:03',NULL,'2026-08-19 15:03:03',0),(9,10,13,7,'2026-08-19 15:16:12',NULL,'2026-08-19 15:16:29',0),(10,10,13,7,'2026-08-19 15:27:23',NULL,NULL,1),(11,8,13,7,'2026-08-19 15:27:29',NULL,NULL,1),(16,13,12,7,'2026-08-20 12:46:49','2026-08-20 12:47:56',NULL,1),(17,12,12,7,'2026-08-20 12:48:55','2026-08-20 13:59:49',NULL,1),(18,7,12,7,'2026-08-20 13:59:15','2026-08-20 13:59:48','2026-08-24 06:56:56',0),(21,7,12,7,'2026-08-24 07:35:38','2026-08-24 08:01:20',NULL,1),(23,28,23,7,'2026-08-27 07:28:51','2026-08-27 08:10:35',NULL,1),(24,30,13,7,'2026-08-28 10:36:00',NULL,NULL,1),(25,29,12,7,'2026-08-28 10:49:25','2026-08-28 10:54:22',NULL,1);
 /*!40000 ALTER TABLE `asset_assignments` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -80,6 +93,7 @@ CREATE TABLE `asset_history` (
   PRIMARY KEY (`id`),
   KEY `fk_history_asset` (`asset_id`),
   KEY `fk_history_user` (`performed_by`),
+  KEY `idx_history_asset_created` (`asset_id`,`created_at`),
   CONSTRAINT `fk_history_asset` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_history_user` FOREIGN KEY (`performed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=132 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -153,6 +167,7 @@ CREATE TABLE `assets` (
   UNIQUE KEY `asset_tag` (`asset_tag`),
   KEY `fk_assets_category` (`category_id`),
   KEY `fk_assets_assignee` (`current_assignee_id`),
+  KEY `idx_assets_status` (`status`),
   CONSTRAINT `fk_assets_assignee` FOREIGN KEY (`current_assignee_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_assets_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -166,36 +181,6 @@ LOCK TABLES `assets` WRITE;
 /*!40000 ALTER TABLE `assets` DISABLE KEYS */;
 INSERT INTO `assets` VALUES (2,'LAP-001','Dell Laptop',1,NULL,'2026-01-15',1200.50,'retired','good','active',NULL,'2026-08-11 12:17:35','2026-08-11 12:22:49',NULL),(4,'LAP-002','MacBook Pro 14\"',7,NULL,'2026-08-13',899.00,'retired','fair','active',NULL,'2026-08-13 12:55:18','2026-08-17 12:52:27',NULL),(5,'MON-001','Dell UltraSharp 27\"',2,NULL,'2026-08-13',899.00,'assigned','good','active',11,'2026-08-13 12:55:18','2026-08-18 11:28:44',NULL),(6,'CHR-001','Ergo Office Chair',3,NULL,'2026-08-13',899.00,'assigned','good','active',9,'2026-08-13 12:55:18','2026-08-13 12:55:18',NULL),(7,'PHN-001','iPhone 13',4,NULL,'2026-08-13',899.00,'assigned','good','active',NULL,'2026-08-13 12:55:18','2026-08-24 07:35:38',NULL),(8,'TEST-UI-001','Test Laptop From UI Flow',7,NULL,'2026-08-17',1200.00,'assigned','new','active',13,'2026-08-17 13:16:56','2026-08-19 15:27:29',NULL),(10,'SOmething','vdvd',4,NULL,'2026-12-12',3333.00,'disposed','good','active',13,'2026-08-17 13:29:02','2026-08-27 07:38:40','2026-08-27 07:38:40'),(11,'Nil','Jabra Speaker',11,NULL,NULL,NULL,'assigned','new','active',13,'2026-08-18 08:04:43','2026-08-18 08:26:39',NULL),(12,'gg','gggtb',11,NULL,NULL,NULL,'assigned','new','active',12,'2026-08-19 14:55:48','2026-08-25 13:49:41',NULL),(13,'hh','hh',2,NULL,'2026-07-30',55.00,'assigned','new','active',12,'2026-08-19 14:58:37','2026-08-20 12:46:49',NULL),(14,'ffv','vfv',11,NULL,NULL,NULL,'available','fair','active',NULL,'2026-08-19 15:10:49','2026-08-19 15:11:04',NULL),(28,'AST-28','Lenovo laptop #28',7,'Lenovo',NULL,566.00,'assigned','fair','active',23,'2026-08-25 12:17:58','2026-08-27 07:28:51',NULL),(29,'AST-29','Samsung phone #29',4,'Samsung','2026-08-06',300.00,'assigned','new','active',12,'2026-08-28 09:07:51','2026-08-28 10:49:25',NULL),(30,'AST-30','Lenovo laptop #30',7,'Lenovo','2026-08-06',30000.00,'assigned','new','active',13,'2026-08-28 10:35:38','2026-08-28 10:36:00',NULL),(31,'AST-31','Dell monitor #31',2,'Dell',NULL,NULL,'available','new','active',NULL,'2026-08-28 10:45:22','2026-08-28 10:45:22',NULL);
 /*!40000 ALTER TABLE `assets` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `audit_logs`
---
-
-DROP TABLE IF EXISTS `audit_logs`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `audit_logs` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `admin_id` int NOT NULL,
-  `action` varchar(255) DEFAULT NULL,
-  `entity_type` varchar(100) DEFAULT NULL,
-  `entity_id` int DEFAULT NULL,
-  `details` text,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `fk_audit_admin` (`admin_id`),
-  CONSTRAINT `fk_audit_admin` FOREIGN KEY (`admin_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `audit_logs`
---
-
-LOCK TABLES `audit_logs` WRITE;
-/*!40000 ALTER TABLE `audit_logs` DISABLE KEYS */;
-/*!40000 ALTER TABLE `audit_logs` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -359,7 +344,7 @@ CREATE TABLE `requests` (
   `repair_details` text,
   `completion_notes` text,
   `review_notes` text,
-  `status` enum('pending','approved','rejected','completed','sent_for_repair') DEFAULT NULL,
+  `status` enum('pending','approved','rejected','completed','sent_for_repair') NOT NULL DEFAULT 'pending',
   `reviewed_by` int DEFAULT NULL,
   `resulting_asset_id` int DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
@@ -373,6 +358,7 @@ CREATE TABLE `requests` (
   KEY `fk_requests_category` (`category_id`),
   KEY `fk_requests_reviewed_by` (`reviewed_by`),
   KEY `resulting_asset_id` (`resulting_asset_id`),
+  KEY `idx_requests_status` (`status`),
   CONSTRAINT `fk_requests_asset` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_requests_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_requests_employee` FOREIGN KEY (`employee_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
@@ -402,7 +388,7 @@ CREATE TABLE `users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `full_name` varchar(150) DEFAULT NULL,
   `email` varchar(255) NOT NULL,
-  `password_hash` varchar(255) DEFAULT NULL,
+  `password_hash` varchar(255) NOT NULL,
   `role` enum('employee','administrator') NOT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,

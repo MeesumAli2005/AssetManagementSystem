@@ -20,7 +20,7 @@ Inside `server/src`, `routes` just wires URLs to controller functions, `controll
 
 ## Running it with Docker
 
-This is the easiest way to get the whole thing running, and it is meant to be genuinely one command once Docker is installed. From the root of the repo, with a `.env` file present (copy `.env.template` and fill in a password and a JWT secret), run:
+This is the easiest way to get the whole thing running, and it is meant to be genuinely one command once Docker is installed. From the root of the repo, with a `.env` file present (copy `.env.template` and fill in a root password, a database username and password for the app itself, and a JWT secret), run:
 
 ```
 docker compose up --build
