@@ -48,7 +48,7 @@ export async function getAllDepartments(req: Request, res: Response) {
       "SELECT * FROM departments ORDER BY name ASC",
     );
 
-    return res.json(departments);
+    return res.json({ data: departments });
   } catch (err) {
     console.error(err);
     return res

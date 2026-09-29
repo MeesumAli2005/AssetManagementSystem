@@ -138,12 +138,36 @@ export async function getMyRequests(req: Request, res: Response) {
       [req.user!.id],
     );
 
-    return res.json(rows.map(stripPrivateFields));
+    return res.json({ data: rows.map(stripPrivateFields) });
   } catch (err) {
     console.error(err);
     return res
       .status(500)
       .json({ message: "Server error fetching your requests" });
+  }
+}
+
+// ================================================================
+// PENDING REQUEST COUNT (admin — sidebar badge)
+// ================================================================
+// Same "pending" widening as getAllRequests's ?status=pending — a request
+// that's approved or sent_for_repair is still waiting on the next admin
+// action, so it counts as part of the pending pile. This exists so the
+// sidebar badge can ask for just a number instead of downloading every
+// pending request's full row on every page navigation just to read
+// .length.
+export async function getPendingRequestCount(req: Request, res: Response) {
+  try {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS count FROM requests
+       WHERE status IN ('pending', 'approved', 'sent_for_repair')`,
+    );
+    return res.json({ count: rows[0]!.count });
+  } catch (err) {
+    console.error(err);
+    return res
+      .status(500)
+      .json({ message: "Server error fetching pending request count" });
   }
 }
 
@@ -207,7 +231,7 @@ export async function getAllRequests(req: Request, res: Response) {
       values,
     );
 
-    return res.json(rows);
+    return res.json({ data: rows });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server error fetching requests" });
@@ -550,8 +574,11 @@ export async function assignAssetToRequest(req: Request, res: Response) {
 
     if (asset.status !== "available") {
       await connection.rollback();
+      // 409, not 400 — the request itself is well-formed, it's just in
+      // conflict with the asset's current state (which may have just
+      // changed under it, e.g. another admin assigned it a moment ago).
       return res
-        .status(400)
+        .status(409)
         .json({ message: "This asset is not currently available" });
     }
 

@@ -1,10 +1,11 @@
 // the sidebar + topbar shell every logged in page sits inside, also polls badge counts
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ROLES } from "../constants";
-import { getPendingAcknowledgements } from "../api/assets";
-import { getMyRequests, getAllRequests } from "../api/requests";
+import { getMyPendingAcknowledgementsCount } from "../api/assets";
+import { getPendingRequestCount } from "../api/requests";
 
 const ICONS: Record<string, ReactNode> = {
   categories: (
@@ -127,50 +128,44 @@ function initials(name: string | null, email: string) {
 export default function Layout() {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const [counts, setCounts] = useState<Record<string, number>>({});
+  const isAdmin = user?.role === ROLES.ADMINISTRATOR;
 
-  // Re-fetched on every navigation within the app shell (Layout itself never
-  // unmounts across routes, so a mount-only effect would go stale) — cheap
-  // enough for a couple of small list requests, and keeps the sidebar badges
-  // from drifting after the user acts on something.
+  // React Query caches these between renders (and dedupes concurrent
+  // requests for the same key), but Layout itself never unmounts across
+  // routes — so without the effect below, the count would only ever be
+  // fetched once, on first login, and go stale as soon as the user acted
+  // on something. `enabled` keeps the query from ever running for the
+  // role it doesn't apply to.
+  const requestCountQuery = useQuery({
+    queryKey: ["pendingRequestCount"],
+    queryFn: getPendingRequestCount,
+    enabled: isAdmin,
+  });
+
+  const ackCountQuery = useQuery({
+    queryKey: ["myPendingAcknowledgementsCount"],
+    queryFn: getMyPendingAcknowledgementsCount,
+    enabled: !!user && !isAdmin,
+  });
+
+  // Re-fetched on every navigation within the app shell, same as before —
+  // keeps the badge from drifting after the user acts on something (e.g.
+  // approving a request) without needing a manual refetch call at every
+  // single call site that changes one of these counts.
   useEffect(() => {
-    // Layout only ever renders inside a ProtectedRoute, which already
-    // redirects to /login when there's no user — this guard just proves
-    // that to the type checker, which can't see across that boundary.
     if (!user) return;
-    const currentUser = user;
-    let cancelled = false;
-
-    async function loadCounts() {
-      try {
-        if (currentUser.role === ROLES.ADMINISTRATOR) {
-          const pending = await getAllRequests({ status: "pending" });
-          if (!cancelled) setCounts({ reqs: pending.length });
-        } else {
-          const [pendingAcks, myRequests] = await Promise.all([
-            getPendingAcknowledgements(),
-            getMyRequests(),
-          ]);
-          const pendingReturnAcks = myRequests.filter(
-            (r) =>
-              r.request_type === "return" &&
-              r.status === "completed" &&
-              !r.acknowledged_at,
-          ).length;
-
-          if (!cancelled)
-            setCounts({ acks: pendingAcks.length + pendingReturnAcks });
-        }
-      } catch {}
+    if (isAdmin) {
+      requestCountQuery.refetch();
+    } else {
+      ackCountQuery.refetch();
     }
-
-    loadCounts();
-    return () => {
-      cancelled = true;
-    };
-  }, [user, location.pathname]);
+  }, [user, isAdmin, location.pathname]);
 
   if (!user) return null;
+
+  const counts: Record<string, number> = isAdmin
+    ? { reqs: requestCountQuery.data ?? 0 }
+    : { acks: ackCountQuery.data ?? 0 };
 
   const links = user.role === ROLES.ADMINISTRATOR ? ADMIN_LINKS : EMPLOYEE_LINKS;
 

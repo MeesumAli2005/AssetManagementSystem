@@ -5,7 +5,7 @@ import {
   logout,
   changePassword,
 } from "../controllers/authController.js";
-import { requireAuth, requireAuthOptional } from "../middleware/auth.js";
+import { requireAuth, requireAuthIgnoreExpiry } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validate.js";
 import { changePasswordSchema, loginSchema } from "../schemas.js";
 
@@ -22,11 +22,9 @@ const loginLimiter = rateLimit({
   message: { message: "Too many login attempts. Try again in a few minutes." },
 });
 
-//router.post('/signup', signup);
-
 router.post("/login", loginLimiter, validateBody(loginSchema), login);
 
-router.post("/logout", requireAuthOptional, logout);
+router.post("/logout", requireAuthIgnoreExpiry, logout);
 
 router.post(
   "/change-password",

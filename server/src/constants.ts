@@ -13,6 +13,7 @@ export const REQUEST_TYPES = ["asset", "return", "repair"] as const;
 export const BCRYPT_SALT_ROUNDS = 10;
 export const MIN_PASSWORD_LENGTH = 8;
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+export const MAX_PAGE_SIZE = 100;
 
 // How long a one-time document view link stays valid if it's never used.
 // Once it IS used, it dies immediately regardless of this window.

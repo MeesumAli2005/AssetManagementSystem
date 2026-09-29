@@ -1,6 +1,6 @@
 // request workflow calls - create, review, assign, return/repair steps
 import api from "./axios";
-import type { RequestNote, RequestRecord, RequestStatus } from "../types";
+import type { ListResponse, RequestNote, RequestRecord, RequestStatus } from "../types";
 
 // createRequest's payload shape actually varies by request_type ("asset" vs
 // "return"/"repair" needs different fields) — left as a loose record rather
@@ -21,18 +21,25 @@ export async function createRequest(payload: NewRequestPayload) {
 }
 
 export async function getMyRequests() {
-  const response = await api.get<RequestRecord[]>("/requests/mine");
-  return response.data;
+  const response = await api.get<ListResponse<RequestRecord>>("/requests/mine");
+  return response.data.data;
 }
 
 export async function getAllRequests({
   status,
   search,
 }: { status?: string | undefined; search?: string | undefined } = {}) {
-  const response = await api.get<RequestRecord[]>("/requests", {
+  const response = await api.get<ListResponse<RequestRecord>>("/requests", {
     params: { status, search },
   });
-  return response.data;
+  return response.data.data;
+}
+
+// Just the count — used by the sidebar badge, so it doesn't have to
+// download every pending request's full row just to read .length.
+export async function getPendingRequestCount() {
+  const response = await api.get<{ count: number }>("/requests/pending-count");
+  return response.data.count;
 }
 
 export async function getRequestById(id: number) {

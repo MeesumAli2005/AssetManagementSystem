@@ -1,4 +1,5 @@
-// login, logout, change password - the actual signup handler is commented out below, we removed that flow
+// login, logout, change password — self-service signup was removed; admins
+// create employee accounts instead (see adminController.js)
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import type { Request, Response } from "express";
@@ -17,36 +18,6 @@ const DUMMY_PASSWORD_HASH = bcrypt.hashSync(
   "not-a-real-password",
   BCRYPT_SALT_ROUNDS,
 );
-
-// export async function signup(req, res) {
-//   try {
-//     const { full_name, email, password } = req.body;
-
-//     if (!email || !password) {
-//       return res.status(400).json({ message: 'Email and password are required' });
-//     }
-
-//     const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
-//     if (existing.length > 0) {
-//       return res.status(409).json({ message: 'Email already registered' });
-//     }
-
-//     const password_hash = await bcrypt.hash(password, 10);
-
-//     const [result] = await pool.query(
-//       'INSERT INTO users (full_name, email, password_hash, role) VALUES (?, ?, ?, ?)',
-//       [full_name, email, password_hash, 'employee'] // always employee — never trust client-sent role
-//     );
-
-//     return res.status(201).json({ id: result.insertId, email, role: 'employee' });
-//   }
-
-//   catch (err)
-//   {
-//     console.error(err);
-//     return res.status(500).json({ message: 'Server error during signup' });
-//   }
-// }
 
 // ---------------------------------------------------------------------
 // LOGIN

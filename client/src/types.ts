@@ -128,12 +128,23 @@ export interface AssetDetail extends Asset {
   } | null;
 }
 
-export interface PaginatedAssets {
-  data: Asset[];
+// Every list endpoint responds { data: T[], meta?: M } — meta holds
+// whatever extra info that particular endpoint has (pagination, a summary,
+// or nothing at all). This is the plain "nothing extra" case.
+export interface ListResponse<T> {
+  data: T[];
+}
+
+export interface AssetsPageMeta {
   page: number;
   limit: number;
   total: number;
   totalPages: number;
+}
+
+export interface PaginatedAssets {
+  data: Asset[];
+  meta: AssetsPageMeta;
 }
 
 export interface AssetStats {
@@ -173,6 +184,11 @@ export interface MyAssetsSummary {
   active: number;
   dormant: number;
   under_repair: number;
+}
+
+export interface MyAssignedAssetsResponse {
+  data: MyAssignedAsset[];
+  meta: MyAssetsSummary;
 }
 
 export interface MyProfile {

@@ -1,46 +1,51 @@
 // searchable/filterable employee table for admins
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { getAllEmployees } from "../../api/employees";
 import { getAllDepartments } from "../../api/departments";
 import StatusBadge from "../../components/StatusBadge";
-import type { Department, Employee } from "../../types";
 import { getErrorMessage } from "../../utils/errors";
 
 export default function EmployeeList() {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
   const [search, setSearch] = useState("");
   const [departmentId, setDepartmentId] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  // Departments only need to be fetched once, to populate the filter dropdown.
+  // Debounced separately from `search` itself, so the query key (and thus
+  // the actual request) only changes 300ms after typing stops, not on
+  // every keystroke.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   useEffect(() => {
-    getAllDepartments()
-      .then(setDepartments)
-      .catch(() => {});
-  }, []);
-
-  // Re-fetch employees whenever the search text or department filter
-  // changes. Debounced so we're not hitting the API on every keystroke.
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setLoading(true);
-      setError("");
-      getAllEmployees({
-        search: search || undefined,
-        department_id: departmentId ? Number(departmentId) : undefined,
-      })
-        .then(setEmployees)
-        .catch((err) =>
-          setError(getErrorMessage(err, "Failed to load employees")),
-        )
-        .finally(() => setLoading(false));
-    }, 300);
-
+    const timeoutId = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timeoutId);
-  }, [search, departmentId]);
+  }, [search]);
+
+  // Departments rarely change, and several pages fetch this same list —
+  // React Query shares one cached copy across all of them instead of every
+  // page re-requesting it.
+  const departmentsQuery = useQuery({
+    queryKey: ["departments"],
+    queryFn: getAllDepartments,
+  });
+  const departments = departmentsQuery.data ?? [];
+
+  const employeesQuery = useQuery({
+    queryKey: [
+      "employees",
+      debouncedSearch || undefined,
+      departmentId ? Number(departmentId) : undefined,
+    ],
+    queryFn: () =>
+      getAllEmployees({
+        search: debouncedSearch || undefined,
+        department_id: departmentId ? Number(departmentId) : undefined,
+      }),
+  });
+  const employees = employeesQuery.data ?? [];
+  const loading = employeesQuery.isLoading;
+  const error = employeesQuery.isError
+    ? getErrorMessage(employeesQuery.error, "Failed to load employees")
+    : "";
 
   return (
     <div className="mx-auto max-w-6xl">

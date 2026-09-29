@@ -7,7 +7,7 @@ import { getAllDepartments } from "../api/departments";
 import { getAllEmployees } from "../api/employees";
 import StatusBadge from "../components/StatusBadge";
 import { useAuth } from "../context/AuthContext";
-import { ROLES } from "../constants";
+import { ASSET_STATUS_COLORS, ROLES } from "../constants";
 import type {
   Asset,
   AssetStatus,
@@ -25,14 +25,6 @@ const STATUSES: AssetStatus[] = [
   "disposed",
 ];
 const PAGE_SIZE = 10;
-
-const STATUS_COLORS: Record<AssetStatus, string> = {
-  available: "green",
-  assigned: "amber",
-  under_repair: "red",
-  retired: "slate",
-  disposed: "slate",
-};
 
 export default function AssetList() {
   const { user } = useAuth();
@@ -101,8 +93,8 @@ export default function AssetList() {
       })
         .then((result) => {
           setAssets(result.data);
-          setTotalPages(result.totalPages);
-          setTotal(result.total);
+          setTotalPages(result.meta.totalPages);
+          setTotal(result.meta.total);
         })
         .catch((err) =>
           setError(getErrorMessage(err, "Failed to load assets")),
@@ -253,7 +245,7 @@ export default function AssetList() {
                     <td className="px-4 py-2.5">
                       <StatusBadge
                         text={asset.status.replace("_", " ")}
-                        color={STATUS_COLORS[asset.status]}
+                        color={ASSET_STATUS_COLORS[asset.status]}
                       />
                     </td>
                     <td className="px-4 py-2.5 text-right">

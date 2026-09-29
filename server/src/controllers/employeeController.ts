@@ -107,21 +107,35 @@ export async function getAllEmployees(req: Request, res: Response) {
 
     const [employees] = await pool.query<RowDataPacket[]>(sqlQuery, queryValues);
 
-    // for each employee, also grab which department(s) they belong to.
-    // We do this as a separate loop rather than one giant JOIN query
-    for (let i = 0; i < employees.length; i++) {
-      const [departments] = await pool.query<RowDataPacket[]>(
+    // One extra query total for every employee's departments, instead of
+    // one query per employee — fetch them all at once (keyed by
+    // employee_id) and group in JS, rather than looping and re-querying
+    // per row.
+    const employeeIds = employees.map((e) => e.id);
+    if (employeeIds.length > 0) {
+      const [allDepartments] = await pool.query<RowDataPacket[]>(
         `
-            SELECT d.id, d.name
+            SELECT ed.employee_id, d.id, d.name
             FROM departments d
             JOIN employee_departments ed ON d.id = ed.department_id
-            WHERE ed.employee_id = ?
+            WHERE ed.employee_id IN (?)
             `,
-        [employees[i]!.id],
+        [employeeIds],
       );
-      employees[i]!.departments = departments;
+
+      const departmentsByEmployeeId = new Map<number, RowDataPacket[]>();
+      for (const { employee_id, ...department } of allDepartments) {
+        if (!departmentsByEmployeeId.has(employee_id)) {
+          departmentsByEmployeeId.set(employee_id, []);
+        }
+        departmentsByEmployeeId.get(employee_id)!.push(department);
+      }
+
+      for (const employee of employees) {
+        employee.departments = departmentsByEmployeeId.get(employee.id) || [];
+      }
     }
-    return res.json(employees);
+    return res.json({ data: employees });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server error fetching employees" });

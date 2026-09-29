@@ -1,12 +1,12 @@
 // asset document uploads/downloads (receipts, repair papers etc)
 import api from "./axios";
-import type { AssetDocument } from "../types";
+import type { AssetDocument, ListResponse } from "../types";
 
 export async function getDocumentsForAsset(assetId: number) {
-  const response = await api.get<AssetDocument[]>(
+  const response = await api.get<ListResponse<AssetDocument>>(
     `/assets/${assetId}/documents`,
   );
-  return response.data;
+  return response.data.data;
 }
 
 export async function uploadDocument(

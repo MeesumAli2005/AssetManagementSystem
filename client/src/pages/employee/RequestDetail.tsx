@@ -4,30 +4,15 @@ import { useParams, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { getRequestById, acknowledgeReturn } from "../../api/requests";
 import StatusBadge from "../../components/StatusBadge";
-import type { RequestNote, RequestRecord, RequestStatus, RequestType } from "../../types";
+import {
+  REQUEST_STATUS_COLORS,
+  REQUEST_TYPE_COMPLETION_LABELS,
+  REQUEST_TYPE_LABELS,
+} from "../../constants";
+import type { RequestNote, RequestRecord } from "../../types";
 import { getErrorMessage } from "../../utils/errors";
 
 type RequestDetailData = RequestRecord & { notes?: RequestNote[] };
-
-const STATUS_COLORS: Record<RequestStatus, string> = {
-  pending: "amber",
-  approved: "green",
-  sent_for_repair: "amber",
-  rejected: "red",
-  completed: "slate",
-};
-
-const TYPE_LABELS: Record<RequestType, string> = {
-  asset: "New asset",
-  return: "Return",
-  repair: "Repair",
-};
-
-const COMPLETION_LABELS: Record<RequestType, string> = {
-  asset: "Asset assigned",
-  return: "Return completed",
-  repair: "Repair completed",
-};
 
 // Derives the request's lifecycle timeline from the timestamp/actor fields
 // already on the row — no separate audit table, just presenting what's
@@ -53,7 +38,7 @@ function buildTimeline(r: RequestDetailData) {
 
   if (r.completed_at) {
     steps.push({
-      label: COMPLETION_LABELS[r.request_type],
+      label: REQUEST_TYPE_COMPLETION_LABELS[r.request_type],
       at: r.completed_at,
       by: r.completed_by_name,
     });
@@ -141,12 +126,12 @@ export default function RequestDetail() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="font-serif text-3xl font-bold tracking-tight text-zinc-100">
-            {TYPE_LABELS[request.request_type]} request
+            {REQUEST_TYPE_LABELS[request.request_type]} request
           </h1>
         </div>
         <StatusBadge
           text={(request.status ?? "pending").replaceAll("_", " ")}
-          color={STATUS_COLORS[request.status ?? "pending"]}
+          color={REQUEST_STATUS_COLORS[request.status ?? "pending"]}
         />
       </div>
 

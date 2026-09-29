@@ -1,4 +1,5 @@
 // all the routes live here, wrapped in whichever ProtectedRoute/Layout combo fits the role
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster, ToastBar, toast } from "react-hot-toast";
 import CategoryList from "./pages/CategoryList";
 import AssetList from "./pages/AssetList";
@@ -11,7 +12,6 @@ import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
-//import Signup from './pages/Signup';
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import EmployeeDetail from "./pages/admin/EmployeeDetail";
@@ -28,8 +28,15 @@ import RequestQueue from "./pages/admin/RequestQueue";
 import RequestDetail from "./pages/admin/RequestDetail";
 import MyRequestDetail from "./pages/employee/RequestDetail";
 
+// One client for the whole app — currently only used by the employee list
+// (the N+1 fix) and the sidebar badge counts (Layout.tsx), not every page,
+// so most data fetching still uses the plain useState/useEffect pattern
+// elsewhere for now.
+const queryClient = new QueryClient();
+
 export default function App() {
   return (
+    <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <BrowserRouter>
         <Toaster
@@ -83,7 +90,6 @@ export default function App() {
           </Route>
 
           <Route path="/login" element={<Login />} />
-          {/*<Route path="/signup" element={<Signup />} /> */}
 
           {/* Employee-only routes, wrapped in the shared sidebar/topbar Layout */}
           <Route element={<ProtectedRoute allowedRoles={[ROLES.EMPLOYEE]} />}>
@@ -133,5 +139,6 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </QueryClientProvider>
   );
 }

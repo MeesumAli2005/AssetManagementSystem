@@ -13,9 +13,12 @@ tags:
         content:
           application/json:
             schema:
-              type: array
-              items:
-                $ref: "#/components/schemas/Category"
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Category"
   post:
     summary: Create a category, optionally with its spec definitions (admin only)
     tags:

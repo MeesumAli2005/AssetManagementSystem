@@ -96,7 +96,7 @@ export async function getAllCategories(req: Request, res: Response) {
       specs: specs.filter((s) => s.category_id === cat.id),
     }));
 
-    return res.json(result);
+    return res.json({ data: result });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server err fetching categories" });

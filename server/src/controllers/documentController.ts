@@ -70,7 +70,7 @@ export async function getDocumentsForAsset(req: Request, res: Response) {
         ORDER BY d.created_at DESC`,
       [asset_id],
     );
-    return res.json(rows);
+    return res.json({ data: rows });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server error fetching documents" });

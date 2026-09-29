@@ -1,6 +1,6 @@
 // category crud + fetching specs for a category
 import api from "./axios";
-import type { Category, CategorySpec } from "../types";
+import type { Category, CategorySpec, ListResponse } from "../types";
 
 // The write shape differs from CategorySpec (the read shape) in one field:
 // is_required is a real boolean here (what the create form produces, and
@@ -13,8 +13,8 @@ export interface NewSpec {
 }
 
 export async function getAllCategories() {
-  const response = await api.get<Category[]>("/categories");
-  return response.data;
+  const response = await api.get<ListResponse<Category>>("/categories");
+  return response.data.data;
 }
 
 export async function getCategoryById(id: number) {

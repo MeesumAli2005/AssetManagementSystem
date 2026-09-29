@@ -4,16 +4,9 @@ import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { getMyAssets, setAssetUsageState } from "../../api/assets";
 import StatusBadge from "../../components/StatusBadge";
-import type { AssetStatus, MyAssetsSummary, MyAssignedAsset } from "../../types";
+import { ASSET_STATUS_COLORS } from "../../constants";
+import type { MyAssetsSummary, MyAssignedAsset } from "../../types";
 import { getErrorMessage } from "../../utils/errors";
-
-const STATUS_COLORS: Record<AssetStatus, string> = {
-  available: "green",
-  assigned: "amber",
-  under_repair: "red",
-  retired: "slate",
-  disposed: "slate",
-};
 
 export default function MyAssets() {
   const [assets, setAssets] = useState<MyAssignedAsset[]>([]);
@@ -32,7 +25,7 @@ export default function MyAssets() {
     try {
       const result = await getMyAssets();
       setAssets(result.data);
-      setSummary(result.summary);
+      setSummary(result.meta);
     } catch (err) {
       setError(getErrorMessage(err, "Failed to load your assets"));
     } finally {
@@ -119,7 +112,7 @@ export default function MyAssets() {
                 <div className="flex items-center gap-2">
                   <StatusBadge
                     text={asset.status.replace("_", " ")}
-                    color={STATUS_COLORS[asset.status]}
+                    color={ASSET_STATUS_COLORS[asset.status]}
                   />
                   <StatusBadge text={asset.condition} color="slate" />
                   {asset.status === "assigned" && (

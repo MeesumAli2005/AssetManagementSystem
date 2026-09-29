@@ -3,22 +3,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getMyRequests } from "../../api/requests";
 import StatusBadge from "../../components/StatusBadge";
-import type { RequestRecord, RequestStatus, RequestType } from "../../types";
+import { REQUEST_STATUS_COLORS, REQUEST_TYPE_LABELS } from "../../constants";
+import type { RequestRecord } from "../../types";
 import { getErrorMessage } from "../../utils/errors";
-
-const STATUS_COLORS: Record<RequestStatus, string> = {
-  pending: "amber",
-  approved: "green",
-  sent_for_repair: "amber",
-  rejected: "red",
-  completed: "slate",
-};
-
-const TYPE_LABELS: Record<RequestType, string> = {
-  asset: "New asset",
-  return: "Return",
-  repair: "Repair",
-};
 
 export default function MyRequests() {
   const [requests, setRequests] = useState<RequestRecord[]>([]);
@@ -82,7 +69,7 @@ export default function MyRequests() {
                 >
                   <div>
                     <p className="text-base font-medium text-zinc-100">
-                      {TYPE_LABELS[r.request_type]}
+                      {REQUEST_TYPE_LABELS[r.request_type]}
                       {r.category_name && (
                         <span className="font-normal text-zinc-500">
                           {" "}
@@ -110,7 +97,7 @@ export default function MyRequests() {
                   </div>
                   <StatusBadge
                     text={(r.status ?? "pending").replaceAll("_", " ")}
-                    color={STATUS_COLORS[r.status ?? "pending"]}
+                    color={REQUEST_STATUS_COLORS[r.status ?? "pending"]}
                   />
                 </Link>
               </li>

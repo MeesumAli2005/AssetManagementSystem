@@ -94,6 +94,7 @@ s
 **The problems**
 
 - **The employee list runs one extra database query per employee.** Ten employees means eleven queries, and a hundred means a hundred and one.
+- **Fetching a single asset waits on up to four database round trips in a row**, one after another, even though most of them don't depend on each other's results, only on the caller's role, which is already known before any of them run.
 - **Anyone can ask for a million rows at once.** The page size has no upper limit.
 - **The sidebar badge downloads every pending request just to count them**, and it does that on every page change.
 - **The same color and label tables are copied into several pages.** Change one and the others quietly disagree.

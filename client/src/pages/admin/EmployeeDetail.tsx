@@ -12,22 +12,14 @@ import { getAllDepartments } from "../../api/departments";
 import { getAllAssets, updateAsset } from "../../api/assets";
 import StatusBadge from "../../components/StatusBadge";
 import Modal from "../../components/Modal";
+import { ASSET_STATUS_COLORS } from "../../constants";
 import type {
   Asset,
-  AssetStatus,
   AssignedAssetSummary,
   Department,
   EmployeeProfile,
 } from "../../types";
 import { getErrorMessage } from "../../utils/errors";
-
-const ASSET_STATUS_COLORS: Record<AssetStatus, string> = {
-  available: "green",
-  assigned: "amber",
-  under_repair: "red",
-  retired: "slate",
-  disposed: "slate",
-};
 
 export default function EmployeeDetail() {
   const { id } = useParams();

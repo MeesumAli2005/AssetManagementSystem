@@ -6,8 +6,8 @@ import type {
   AssetDetail,
   AssetStats,
   AssetUsageState,
-  MyAssetsSummary,
-  MyAssignedAsset,
+  ListResponse,
+  MyAssignedAssetsResponse,
   PaginatedAssets,
 } from "../types";
 
@@ -80,25 +80,32 @@ export async function disposeAsset(id: number, reason: string) {
 }
 
 export async function getMyAssets() {
-  const response = await api.get<{
-    data: MyAssignedAsset[];
-    summary: MyAssetsSummary;
-  }>("/assets/mine");
+  const response = await api.get<MyAssignedAssetsResponse>("/assets/mine");
   return response.data;
 }
 
 export async function getPendingAcknowledgements() {
-  const response = await api.get<Acknowledgement[]>(
+  const response = await api.get<ListResponse<Acknowledgement>>(
     "/assets/pending-acknowledgements",
   );
-  return response.data;
+  return response.data.data;
+}
+
+// Just the combined count (pending assignment acks + pending return acks)
+// — used by the sidebar badge, so it doesn't have to download full rows
+// from two different endpoints just to add up their lengths.
+export async function getMyPendingAcknowledgementsCount() {
+  const response = await api.get<{ count: number }>(
+    "/assets/my-pending-acknowledgements-count",
+  );
+  return response.data.count;
 }
 
 export async function getMyAcknowledgements() {
-  const response = await api.get<Acknowledgement[]>(
+  const response = await api.get<ListResponse<Acknowledgement>>(
     "/assets/my-acknowledgements",
   );
-  return response.data;
+  return response.data.data;
 }
 
 export async function getAcknowledgementById(id: number) {

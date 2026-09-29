@@ -1,56 +1,6 @@
 tags:
   name: Auth
-  description: Signup, login, logout, and password change
-/api/auth/signup:
-  post:
-    summary: Self-signup (always creates an employee account)
-    tags:
-      - Auth
-    security: []
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - email
-              - password
-            properties:
-              full_name:
-                type: string
-              email:
-                type: string
-                format: email
-              password:
-                type: string
-                format: password
-    responses:
-      "201":
-        description: Account created
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                id:
-                  type: integer
-                email:
-                  type: string
-                role:
-                  type: string
-      "400":
-        description: Missing required fields
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/Error"
-      "409":
-        description: Email already registered
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/Error"
+  description: Login, logout, and password change
 /api/auth/login:
   post:
     summary: Log in and receive a JWT

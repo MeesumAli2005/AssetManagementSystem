@@ -2,7 +2,7 @@
 import type { Request, Response } from "express";
 import type { PoolConnection, RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import pool from "../config/db.js";
-import { ASSET_CONDITIONS, ROLES, USAGE_STATES } from "../constants.js";
+import { ASSET_CONDITIONS, MAX_PAGE_SIZE, ROLES, USAGE_STATES } from "../constants.js";
 
 //valid statuses for a given asset
 
@@ -229,9 +229,14 @@ export async function getAllAssets(req: Request, res: Response) {
     const assigned = req.query.assigned; // 'true' | 'false' | undefined
 
     // req.query values are always strings, so a bad/missing page/limit
-    // just falls back to a sane default instead of crashing.
+    // just falls back to a sane default instead of crashing. limit is also
+    // capped — otherwise ?limit=1000000 would ask for the entire table in
+    // one response.
     const page = Math.max(parseInt(String(req.query.page)) || 1, 1);
-    const limit = Math.max(parseInt(String(req.query.limit)) || 10, 1);
+    const limit = Math.min(
+      Math.max(parseInt(String(req.query.limit)) || 10, 1),
+      MAX_PAGE_SIZE,
+    );
     const offset = (page - 1) * limit;
 
     const conditions = [];
@@ -326,10 +331,12 @@ export async function getAllAssets(req: Request, res: Response) {
 
     return res.json({
       data: assets,
-      page,
-      limit,
-      total,
-      totalPages: Math.max(Math.ceil(total / limit), 1),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(Math.ceil(total / limit), 1),
+      },
     });
   } catch (error) {
     console.error(error);
@@ -414,80 +421,88 @@ export async function getAssetById(req: Request, res: Response) {
     }
 
     // ------------------------------------------------------------
-    // asset history. Admins see the full log. Employees only see the
-    // slice that happened during their own assignment window(s) —
-    // joining against their asset_assignments rows for this asset and
-    // keeping only history entries that fall inside at least one of
-    // those [assigned_at, returned_at-or-now) windows. Not the full
-    // audit trail — just "what happened while I had it".
-    let history;
-    if (req.user!.role === ROLES.ADMINISTRATOR) {
-      const historyResult = await pool.query<RowDataPacket[]>(
-        `SELECT
-                    h.*,
-                    u.full_name AS performed_by_name
+    // History, documents, and spec values each depend only on the asset's
+    // id (and role/req.user.id, both already known at this point) — none
+    // of them depend on each other's results. Previously these ran one
+    // after another, so the response waited on up to three separate
+    // database round trips stacked in a row; running them concurrently
+    // waits on whichever one is slowest, not the sum of all three.
+    //
+    // History: admins see the full log. Employees only see the slice that
+    // happened during their own assignment window(s) — joining against
+    // their asset_assignments rows for this asset and keeping only history
+    // entries that fall inside at least one of those
+    // [assigned_at, returned_at-or-now) windows. Not the full audit trail —
+    // just "what happened while I had it".
+    const historyPromise =
+      req.user!.role === ROLES.ADMINISTRATOR
+        ? pool.query<RowDataPacket[]>(
+            `SELECT
+                        h.*,
+                        u.full_name AS performed_by_name
 
-                FROM asset_history h
+                    FROM asset_history h
 
-                LEFT JOIN users u
-                    ON h.performed_by = u.id
+                    LEFT JOIN users u
+                        ON h.performed_by = u.id
 
-                WHERE h.asset_id = ?
+                    WHERE h.asset_id = ?
 
-                ORDER BY h.created_at DESC`,
-        [id],
-      );
+                    ORDER BY h.created_at DESC`,
+            [id],
+          )
+        : pool.query<RowDataPacket[]>(
+            `SELECT DISTINCT
+                        h.*,
+                        u.full_name AS performed_by_name
 
-      history = historyResult[0];
-    } else {
-      const historyResult = await pool.query<RowDataPacket[]>(
-        `SELECT DISTINCT
-                    h.*,
-                    u.full_name AS performed_by_name
+                    FROM asset_history h
 
-                FROM asset_history h
+                    JOIN asset_assignments aa
+                        ON aa.asset_id = h.asset_id AND aa.employee_id = ?
+                        AND h.created_at >= aa.assigned_at
+                        AND (aa.returned_at IS NULL OR h.created_at <= aa.returned_at)
 
-                JOIN asset_assignments aa
-                    ON aa.asset_id = h.asset_id AND aa.employee_id = ?
-                    AND h.created_at >= aa.assigned_at
-                    AND (aa.returned_at IS NULL OR h.created_at <= aa.returned_at)
+                    LEFT JOIN users u
+                        ON h.performed_by = u.id
 
-                LEFT JOIN users u
-                    ON h.performed_by = u.id
+                    WHERE h.asset_id = ?
 
-                WHERE h.asset_id = ?
+                    ORDER BY h.created_at DESC`,
+            [req.user!.id, id],
+          );
 
-                ORDER BY h.created_at DESC`,
-        [req.user!.id, id],
-      );
-
-      history = historyResult[0];
-    }
-
-    // asset docs — admin-only. Employees never get these back at all, not
+    // Documents: admin-only. Employees never get these back at all, not
     // even metadata, since document contents themselves are only ever
     // reachable through an admin-minted one-time link (documentController.ts).
-    let documents: RowDataPacket[] = [];
-    if (req.user!.role === ROLES.ADMINISTRATOR) {
-      const documentsResult = await pool.query<RowDataPacket[]>(
-        `SELECT d.id, d.asset_id, d.document_type, d.uploaded_by, d.created_at,
-                u.full_name AS uploaded_by_name
-          FROM asset_documents d
-          LEFT JOIN users u ON d.uploaded_by = u.id
-          WHERE d.asset_id = ?
-          ORDER BY d.created_at DESC`,
-        [id],
-      );
-      documents = documentsResult[0];
-    }
+    // For a non-admin this never touches the database — no query is run at
+    // all, it just resolves to an empty result immediately.
+    const documentsPromise: Promise<[RowDataPacket[], unknown]> =
+      req.user!.role === ROLES.ADMINISTRATOR
+        ? pool.query<RowDataPacket[]>(
+            `SELECT d.id, d.asset_id, d.document_type, d.uploaded_by, d.created_at,
+                    u.full_name AS uploaded_by_name
+              FROM asset_documents d
+              LEFT JOIN users u ON d.uploaded_by = u.id
+              WHERE d.asset_id = ?
+              ORDER BY d.created_at DESC`,
+            [id],
+          )
+        : Promise.resolve([[], []]);
 
-    const [specValues] = await pool.query<RowDataPacket[]>(
+    const specValuesPromise = pool.query<RowDataPacket[]>(
       `SELECT sv.id, sv.category_spec_id, sv.value, cs.spec_name, cs.spec_type
         FROM asset_spec_values sv
         JOIN category_specs cs ON sv.category_spec_id = cs.id
         WHERE sv.asset_id = ?`,
       [id],
     );
+
+    const [[history], [documents], [specValues]] = await Promise.all([
+      historyPromise,
+      documentsPromise,
+      specValuesPromise,
+    ]);
 
     return res.json({
       ...assetRows[0],
@@ -929,12 +944,52 @@ export async function getMyAssignedAssets(req: Request, res: Response) {
       else summary.active += 1;
     }
 
-    return res.json({ data: assets, summary });
+    return res.json({ data: assets, meta: summary });
   } catch (error) {
     console.error(error);
     return res
       .status(500)
       .json({ message: "Server error fetching your assets" });
+  }
+}
+
+// ================================================================
+// PENDING ACKNOWLEDGEMENTS COUNT (employee self-service — sidebar badge)
+// ================================================================
+// The sidebar badge is really two different things added together: assets
+// waiting on an assignment acknowledgement, and returns waiting on a
+// return acknowledgement (see requestController's requests table). One
+// small endpoint that adds both up server-side, instead of the client
+// downloading full asset-assignment rows and full request rows on every
+// navigation just to read their combined .length.
+export async function getMyPendingAcknowledgementsCount(
+  req: Request,
+  res: Response,
+) {
+  try {
+    const myId = req.user!.id;
+
+    const [assignmentRows] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS count FROM asset_assignments
+       WHERE employee_id = ? AND is_active = 1 AND acknowledged_at IS NULL`,
+      [myId],
+    );
+
+    const [returnRows] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS count FROM requests
+       WHERE employee_id = ? AND request_type = 'return'
+         AND status = 'completed' AND acknowledged_at IS NULL`,
+      [myId],
+    );
+
+    return res.json({
+      count: assignmentRows[0]!.count + returnRows[0]!.count,
+    });
+  } catch (err) {
+    console.error(err);
+    return res
+      .status(500)
+      .json({ message: "Server error fetching pending acknowledgements count" });
   }
 }
 
@@ -970,7 +1025,7 @@ export async function getPendingAcknowledgements(req: Request, res: Response) {
       [myId],
     );
 
-    return res.json(rows);
+    return res.json({ data: rows });
   } catch (error) {
     console.error(error);
     return res
@@ -1013,7 +1068,7 @@ export async function getMyAcknowledgements(req: Request, res: Response) {
       [myId],
     );
 
-    return res.json(rows);
+    return res.json({ data: rows });
   } catch (error) {
     console.error(error);
     return res

@@ -78,14 +78,17 @@ tags:
                   type: array
                   items:
                     $ref: "#/components/schemas/Asset"
-                page:
-                  type: integer
-                limit:
-                  type: integer
-                total:
-                  type: integer
-                totalPages:
-                  type: integer
+                meta:
+                  type: object
+                  properties:
+                    page:
+                      type: integer
+                    limit:
+                      type: integer
+                    total:
+                      type: integer
+                    totalPages:
+                      type: integer
   post:
     summary: Create an asset (admin only). asset_tag and name are no longer
       admin-supplied — asset_tag is auto-generated and name is derived as "brand
@@ -168,7 +171,7 @@ tags:
                   type: array
                   items:
                     type: object
-                summary:
+                meta:
                   type: object
                   properties:
                     active:
@@ -572,6 +575,9 @@ tags:
         content:
           application/json:
             schema:
-              type: array
-              items:
-                $ref: "#/components/schemas/AssetDocument"
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/AssetDocument"

@@ -13,28 +13,20 @@ import { uploadDocument, viewDocument } from "../api/documents";
 import StatusBadge from "../components/StatusBadge";
 import Modal from "../components/Modal";
 import { useAuth } from "../context/AuthContext";
-import { ASSET_CONDITIONS, ROLES } from "../constants";
+import { ASSET_CONDITIONS, ASSET_STATUS_COLORS, ROLES } from "../constants";
 import { formatCurrency } from "../utils/format";
 import type { AssetCondition, AssetDetail as AssetDetailData, AssetStatus } from "../types";
 import { getErrorMessage } from "../utils/errors";
 
 // "assigned" is never manually selectable here — assignment now lives
 // entirely on the employee's page (Assign asset panel), so it's excluded
-// from this list. See EDITABLE_STATUSES vs. STATUS_COLORS below.
+// from this list. See EDITABLE_STATUSES vs. ASSET_STATUS_COLORS below.
 const EDITABLE_STATUSES: AssetStatus[] = ["available", "under_repair", "retired"];
 const DOCUMENT_TYPES: ("receipt" | "repair_record" | "other")[] = [
   "receipt",
   "repair_record",
   "other",
 ];
-
-const STATUS_COLORS: Record<AssetStatus, string> = {
-  available: "green",
-  assigned: "amber",
-  under_repair: "red",
-  retired: "slate",
-  disposed: "slate",
-};
 
 export default function AssetDetail() {
   const { id } = useParams();
@@ -197,7 +189,7 @@ export default function AssetDetail() {
         <div className="flex gap-2">
           <StatusBadge
             text={asset.status.replace("_", " ")}
-            color={STATUS_COLORS[asset.status]}
+            color={ASSET_STATUS_COLORS[asset.status]}
           />
           <StatusBadge text={asset.condition} color="slate" />
         </div>

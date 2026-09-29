@@ -1,5 +1,5 @@
 // Augments Express's own Request type with the `user` property requireAuth/
-// requireAuthOptional attach after verifying a JWT. Every controller reads
+// requireAuthIgnoreExpiry attach after verifying a JWT. Every controller reads
 // req.user — without this, TypeScript has no idea that property exists.
 import type { AuthenticatedUser } from "./types.js";
 

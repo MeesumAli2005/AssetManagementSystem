@@ -1,10 +1,10 @@
 // department crud calls
 import api from "./axios";
-import type { Department } from "../types";
+import type { Department, ListResponse } from "../types";
 
 export async function getAllDepartments() {
-  const response = await api.get<Department[]>("/departments");
-  return response.data;
+  const response = await api.get<ListResponse<Department>>("/departments");
+  return response.data.data;
 }
 
 export async function createDepartment(name: string) {

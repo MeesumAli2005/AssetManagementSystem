@@ -4,6 +4,7 @@ import {
   createRequest,
   getMyRequests,
   getAllRequests,
+  getPendingRequestCount,
   getRequestById,
   reviewRequest,
   assignAssetToRequest,
@@ -30,6 +31,15 @@ const router = express.Router();
 router.post("/", requireAuth, validateBody(createRequestSchema), createRequest);
 
 router.get("/mine", requireAuth, getMyRequests);
+
+// Must come before /:id — otherwise Express would match "pending-count"
+// itself as the :id param.
+router.get(
+  "/pending-count",
+  requireAuth,
+  requireRole(ROLES.ADMINISTRATOR),
+  getPendingRequestCount,
+);
 
 router.get("/", requireAuth, requireRole(ROLES.ADMINISTRATOR), getAllRequests);
 

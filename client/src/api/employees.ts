@@ -1,16 +1,16 @@
 // employee-facing api calls, profile stuff and admin employee management
 import api from "./axios";
-import type { Employee, EmployeeProfile, MyProfile } from "../types";
+import type { Employee, EmployeeProfile, ListResponse, MyProfile } from "../types";
 import type { Role } from "../constants";
 
 export async function getAllEmployees({
   search,
   department_id,
 }: { search?: string | undefined; department_id?: number | undefined } = {}) {
-  const response = await api.get<Employee[]>("/employees", {
+  const response = await api.get<ListResponse<Employee>>("/employees", {
     params: { search, department_id },
   });
-  return response.data;
+  return response.data.data;
 }
 
 export async function getEmployeeById(id: number) {

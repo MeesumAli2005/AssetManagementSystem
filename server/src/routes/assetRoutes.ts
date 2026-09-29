@@ -9,6 +9,7 @@ import {
   disposeAsset,
   getMyAssignedAssets,
   getPendingAcknowledgements,
+  getMyPendingAcknowledgementsCount,
   getMyAcknowledgements,
   getAcknowledgementById,
   acknowledgeAssignment,
@@ -43,6 +44,14 @@ router.get(
   "/pending-acknowledgements",
   requireAuth,
   getPendingAcknowledgements,
+);
+
+// Must come before /:id — otherwise Express would match
+// "my-pending-acknowledgements-count" itself as the :id param.
+router.get(
+  "/my-pending-acknowledgements-count",
+  requireAuth,
+  getMyPendingAcknowledgementsCount,
 );
 
 router.get("/my-acknowledgements", requireAuth, getMyAcknowledgements);

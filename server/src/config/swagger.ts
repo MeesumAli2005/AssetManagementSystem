@@ -205,7 +205,7 @@ const options: Options = {
       },
     },
     // Every endpoint requires a bearer token by default; routes that don't
-    // (signup, login) override this with `security: []` in their own JSDoc block.
+    // (login) override this with `security: []` in their own JSDoc block.
 
     security: [{ bearerAuth: [] }],
   },

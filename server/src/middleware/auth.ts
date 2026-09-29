@@ -39,7 +39,12 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-export function requireAuthOptional(
+// Still requires a valid, signed token — just doesn't reject an expired
+// one. Used only for logout, so someone whose token expired can still log
+// out client-side instead of getting stuck unable to clear their session.
+// (Previously named requireAuthOptional, which suggested auth itself was
+// optional here — it isn't; only the expiry check is skipped.)
+export function requireAuthIgnoreExpiry(
   req: Request,
   res: Response,
   next: NextFunction,
