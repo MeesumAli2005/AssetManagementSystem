@@ -25,6 +25,13 @@ import {
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { ROLES } from "../constants.js";
 import upload from "../middleware/upload.js";
+import { validateBody, validateIdParam } from "../middleware/validate.js";
+import {
+  createAssetSchema,
+  retireOrDisposeAssetSchema,
+  setUsageStateSchema,
+  updateAssetSchema,
+} from "../schemas.js";
 
 const router = express.Router();
 
@@ -46,14 +53,29 @@ router.get("/stats", requireAuth, requireRole(ROLES.ADMINISTRATOR), getAssetStat
 
 router.get("/:id", requireAuth, getAssetById);
 
-router.post("/", requireAuth, requireRole(ROLES.ADMINISTRATOR), createAsset);
+router.post(
+  "/",
+  requireAuth,
+  requireRole(ROLES.ADMINISTRATOR),
+  validateBody(createAssetSchema),
+  createAsset,
+);
 
-router.put("/:id", requireAuth, requireRole(ROLES.ADMINISTRATOR), updateAsset);
+router.put(
+  "/:id",
+  requireAuth,
+  requireRole(ROLES.ADMINISTRATOR),
+  validateIdParam("id"),
+  validateBody(updateAssetSchema),
+  updateAsset,
+);
 
 router.post(
   "/:id/retire",
   requireAuth,
   requireRole(ROLES.ADMINISTRATOR),
+  validateIdParam("id"),
+  validateBody(retireOrDisposeAssetSchema),
   retireAsset,
 );
 
@@ -61,18 +83,34 @@ router.post(
   "/:id/dispose",
   requireAuth,
   requireRole(ROLES.ADMINISTRATOR),
+  validateIdParam("id"),
+  validateBody(retireOrDisposeAssetSchema),
   disposeAsset,
 );
 
-router.post("/:id/acknowledge", requireAuth, acknowledgeAssignment);
+router.post(
+  "/:id/acknowledge",
+  requireAuth,
+  validateIdParam("id"),
+  acknowledgeAssignment,
+);
 
-router.patch("/:id/usage-state", requireAuth, setUsageState);
+router.patch(
+  "/:id/usage-state",
+  requireAuth,
+  validateIdParam("id"),
+  validateBody(setUsageStateSchema),
+  setUsageState,
+);
 
-// document uploading by admin only
+// document uploading by admin only — no body schema here since this is a
+// multipart/form-data upload, not JSON; document_type already has a safe
+// fallback in the controller itself.
 router.post(
   "/:asset_id/documents",
   requireAuth,
   requireRole(ROLES.ADMINISTRATOR),
+  validateIdParam("asset_id"),
   upload.single("file"),
   uploadDocument,
 );
@@ -81,6 +119,7 @@ router.get(
   "/:asset_id/documents",
   requireAuth,
   requireRole(ROLES.ADMINISTRATOR),
+  validateIdParam("asset_id"),
   getDocumentsForAsset,
 );
 
@@ -90,6 +129,8 @@ router.post(
   "/:asset_id/documents/:doc_id/link",
   requireAuth,
   requireRole(ROLES.ADMINISTRATOR),
+  validateIdParam("asset_id"),
+  validateIdParam("doc_id"),
   createDocumentAccessLink,
 );
 

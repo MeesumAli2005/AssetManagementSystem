@@ -5,6 +5,11 @@ import {
 } from "../controllers/adminController.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { ROLES } from "../constants.js";
+import { validateBody } from "../middleware/validate.js";
+import {
+  createEmployeeAccountSchema,
+  resetEmployeePasswordSchema,
+} from "../schemas.js";
 
 const router = express.Router();
 
@@ -16,6 +21,7 @@ router.post(
   "/employees",
   requireAuth,
   requireRole(ROLES.ADMINISTRATOR),
+  validateBody(createEmployeeAccountSchema),
   createEmployeeAccount,
 );
 
@@ -23,6 +29,7 @@ router.post(
   "/employees/reset-password",
   requireAuth,
   requireRole(ROLES.ADMINISTRATOR),
+  validateBody(resetEmployeePasswordSchema),
   resetEmployeePassword,
 );
 

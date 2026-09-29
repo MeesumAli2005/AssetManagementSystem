@@ -521,17 +521,27 @@ export async function updateAsset(req: Request, res: Response) {
       assignee_id,
     } = req.body;
 
+    // Opened before the first read, and that read locks the row (FOR
+    // UPDATE) until commit/rollback — this is the same fix as
+    // requestController's assignAssetToRequest, for the same reason: this
+    // function also derives a new status/assignee from a read of the
+    // current row, so a concurrent call here (or in assignAssetToRequest)
+    // touching the same asset needs to wait, not race past a stale read.
+    await connection.beginTransaction();
+
     const [existingRows] = await connection.query<RowDataPacket[]>(
-      "SELECT * FROM assets WHERE id = ?",
+      "SELECT * FROM assets WHERE id = ? FOR UPDATE",
       [id],
     );
 
     if (existingRows.length === 0) {
+      await connection.rollback();
       return res.status(404).json({ message: "Asset not found" });
     }
     const existing = existingRows[0]!;
 
     if (status && !VALID_STATUSES.includes(status)) {
+      await connection.rollback();
       return res.status(400).json({
         message: `status must be one of: ${VALID_STATUSES.join(", ")}`,
       });
@@ -549,6 +559,7 @@ export async function updateAsset(req: Request, res: Response) {
     // enforcement behind "status can't be changed during assignment,
     // and assignment can't be used to sneak in an arbitrary status."
     if (status === "assigned" && assignee_id === undefined) {
+      await connection.rollback();
       return res.status(400).json({
         message:
           'status "assigned" can only be set by assigning the asset to an employee',
@@ -571,6 +582,7 @@ export async function updateAsset(req: Request, res: Response) {
           [assignee_id],
         );
         if (assigneeRows.length === 0) {
+          await connection.rollback();
           return res.status(400).json({
             message: "assignee_id does not refer to an existing user",
           });
@@ -607,6 +619,7 @@ export async function updateAsset(req: Request, res: Response) {
     // against a future change reintroducing the bug this originally
     // fixed (status "assigned" with no assignee).
     if (finalStatus === "assigned" && finalAssigneeId === null) {
+      await connection.rollback();
       return res.status(400).json({
         message: 'Cannot set status to "assigned" without an assignee',
       });
@@ -643,8 +656,6 @@ export async function updateAsset(req: Request, res: Response) {
       }
       finalName = `${finalBrand} ${categoryRows[0]!.name} #${id}`;
     }
-
-    await connection.beginTransaction();
 
     await connection.query(
       `UPDATE assets

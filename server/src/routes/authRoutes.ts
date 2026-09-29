@@ -6,6 +6,8 @@ import {
   changePassword,
 } from "../controllers/authController.js";
 import { requireAuth, requireAuthOptional } from "../middleware/auth.js";
+import { validateBody } from "../middleware/validate.js";
+import { changePasswordSchema, loginSchema } from "../schemas.js";
 
 const router = express.Router();
 
@@ -22,10 +24,15 @@ const loginLimiter = rateLimit({
 
 //router.post('/signup', signup);
 
-router.post("/login", loginLimiter, login);
+router.post("/login", loginLimiter, validateBody(loginSchema), login);
 
 router.post("/logout", requireAuthOptional, logout);
 
-router.post("/change-password", requireAuth, changePassword); // must be logged in — we need req.user.id
+router.post(
+  "/change-password",
+  requireAuth,
+  validateBody(changePasswordSchema),
+  changePassword,
+); // must be logged in — we need req.user.id
 
 export default router;

@@ -354,22 +354,28 @@ export async function reviewRequest(req: Request, res: Response) {
         .json({ message: 'status must be "approved" or "rejected"' });
     }
 
+    // Transaction opens before the first read, and that read holds the row
+    // lock (FOR UPDATE) until commit/rollback — a second reviewRequest call
+    // on the same id has to wait here, then sees the already-updated status
+    // once it does get to read, instead of racing past this check.
+    await connection.beginTransaction();
+
     const [rows] = await connection.query<RowDataPacket[]>(
-      "SELECT * FROM requests WHERE id = ?",
+      "SELECT * FROM requests WHERE id = ? FOR UPDATE",
       [id],
     );
     if (rows.length === 0) {
+      await connection.rollback();
       return res.status(404).json({ message: "Request not found" });
     }
     const request = rows[0]!;
 
     if (request.status !== "pending") {
+      await connection.rollback();
       return res
         .status(400)
         .json({ message: `Request has already been ${request.status}` });
     }
-
-    await connection.beginTransaction();
 
     if (status === "rejected") {
       await connection.query(
@@ -391,9 +397,15 @@ export async function reviewRequest(req: Request, res: Response) {
       });
     }
 
-    // return / repair — act on the already-known asset now
+    // return / repair — act on the already-known asset now. Locked for the
+    // same reason as the request row above — this is what stops
+    // reviewRequest and assignAssetToRequest (or two overlapping
+    // reviewRequest calls) from both acting on the same asset at once.
+    // Always locked in the same order (requests row, then assets row) as
+    // every other function here, so two transactions each wanting both
+    // locks can't deadlock against each other.
     const [assetRows] = await connection.query<RowDataPacket[]>(
-      "SELECT * FROM assets WHERE id = ?",
+      "SELECT * FROM assets WHERE id = ? FOR UPDATE",
       [request.asset_id],
     );
     if (assetRows.length === 0) {
@@ -489,22 +501,35 @@ export async function assignAssetToRequest(req: Request, res: Response) {
       return res.status(400).json({ message: "asset_id is required" });
     }
 
+    // The race this whole function used to have: it checked asset.status
+    // and only started the transaction afterward, so two admins assigning
+    // different approved requests could both pass the "is it available"
+    // check before either one committed — both would succeed, leaving the
+    // asset with two active assignments. Opening the transaction first and
+    // locking both rows (FOR UPDATE) closes that gap: a second call has to
+    // wait for the first to finish, then sees the asset already assigned
+    // and fails cleanly instead of racing past the check.
+    await connection.beginTransaction();
+
     const [requestRows] = await connection.query<RowDataPacket[]>(
-      "SELECT * FROM requests WHERE id = ?",
+      "SELECT * FROM requests WHERE id = ? FOR UPDATE",
       [id],
     );
     if (requestRows.length === 0) {
+      await connection.rollback();
       return res.status(404).json({ message: "Request not found" });
     }
     const request = requestRows[0]!;
 
     if (request.request_type !== "asset") {
+      await connection.rollback();
       return res.status(400).json({
         message: 'Only "asset"-type requests can be fulfilled this way',
       });
     }
 
     if (request.status !== "approved") {
+      await connection.rollback();
       return res.status(400).json({
         message:
           "Request must be approved before an asset can be assigned to it",
@@ -512,10 +537,11 @@ export async function assignAssetToRequest(req: Request, res: Response) {
     }
 
     const [assetRows] = await connection.query<RowDataPacket[]>(
-      "SELECT * FROM assets WHERE id = ?",
+      "SELECT * FROM assets WHERE id = ? FOR UPDATE",
       [asset_id],
     );
     if (assetRows.length === 0) {
+      await connection.rollback();
       return res
         .status(400)
         .json({ message: "asset_id does not refer to an existing asset" });
@@ -523,12 +549,14 @@ export async function assignAssetToRequest(req: Request, res: Response) {
     const asset = assetRows[0]!;
 
     if (asset.status !== "available") {
+      await connection.rollback();
       return res
         .status(400)
         .json({ message: "This asset is not currently available" });
     }
 
     if (asset.category_id !== request.category_id) {
+      await connection.rollback();
       return res.status(400).json({
         message: "This asset does not belong to the requested category",
       });
@@ -539,8 +567,6 @@ export async function assignAssetToRequest(req: Request, res: Response) {
       [request.employee_id],
     );
     const employeeName = employeeRows[0]?.full_name || "employee";
-
-    await connection.beginTransaction();
 
     await connection.query(
       `UPDATE assets SET status = 'assigned', current_assignee_id = ?, usage_state = 'active' WHERE id = ?`,
@@ -587,28 +613,31 @@ export async function completeReturn(req: Request, res: Response) {
     const { id } = req.params;
     const { notes } = req.body;
 
+    await connection.beginTransaction();
+
     const [rows] = await connection.query<RowDataPacket[]>(
-      "SELECT * FROM requests WHERE id = ?",
+      "SELECT * FROM requests WHERE id = ? FOR UPDATE",
       [id],
     );
     if (rows.length === 0) {
+      await connection.rollback();
       return res.status(404).json({ message: "Request not found" });
     }
     const request = rows[0]!;
 
     if (request.request_type !== "return") {
+      await connection.rollback();
       return res.status(400).json({
         message: 'Only "return"-type requests can be completed this way',
       });
     }
 
     if (request.status !== "approved") {
+      await connection.rollback();
       return res.status(400).json({
         message: "Request must be approved before it can be marked completed",
       });
     }
-
-    await connection.beginTransaction();
 
     await connection.query(
       "UPDATE requests SET status = ?, completion_notes = ?, completed_at = NOW(), completed_by = ? WHERE id = ?",
@@ -652,30 +681,34 @@ export async function acknowledgeReturn(req: Request, res: Response) {
     const { id } = req.params;
     const myId = req.user!.id;
 
+    await connection.beginTransaction();
+
     const [rows] = await connection.query<RowDataPacket[]>(
-      "SELECT * FROM requests WHERE id = ?",
+      "SELECT * FROM requests WHERE id = ? FOR UPDATE",
       [id],
     );
     if (rows.length === 0) {
+      await connection.rollback();
       return res.status(404).json({ message: "Request not found" });
     }
     const request = rows[0]!;
 
     if (request.employee_id !== myId) {
+      await connection.rollback();
       return res.status(403).json({ message: "This is not your request" });
     }
 
     if (request.request_type !== "return" || request.status !== "completed") {
+      await connection.rollback();
       return res
         .status(400)
         .json({ message: "This return is not ready to be acknowledged" });
     }
 
     if (request.acknowledged_at !== null) {
+      await connection.rollback();
       return res.status(400).json({ message: "Already acknowledged" });
     }
-
-    await connection.beginTransaction();
 
     await connection.query(
       "UPDATE requests SET acknowledged_at = NOW() WHERE id = ?",
@@ -714,32 +747,41 @@ export async function completeRepair(req: Request, res: Response) {
     const { id } = req.params;
     const { repair_notes } = req.body;
 
+    await connection.beginTransaction();
+
     const [rows] = await connection.query<RowDataPacket[]>(
-      "SELECT * FROM requests WHERE id = ?",
+      "SELECT * FROM requests WHERE id = ? FOR UPDATE",
       [id],
     );
     if (rows.length === 0) {
+      await connection.rollback();
       return res.status(404).json({ message: "Request not found" });
     }
     const request = rows[0]!;
 
     if (request.request_type !== "repair") {
+      await connection.rollback();
       return res.status(400).json({
         message: 'Only "repair"-type requests can be completed this way',
       });
     }
 
     if (request.status !== "sent_for_repair") {
+      await connection.rollback();
       return res.status(400).json({
         message: "Request must be sent for repair before it can be completed",
       });
     }
 
+    // Same lock ordering as everywhere else — requests row first, then the
+    // assets row — so this can't deadlock against reviewRequest or
+    // assignAssetToRequest waiting on the same two rows in the same order.
     const [assetRows] = await connection.query<RowDataPacket[]>(
-      "SELECT * FROM assets WHERE id = ?",
+      "SELECT * FROM assets WHERE id = ? FOR UPDATE",
       [request.asset_id],
     );
     if (assetRows.length === 0) {
+      await connection.rollback();
       return res
         .status(404)
         .json({ message: "The asset for this request no longer exists" });
@@ -751,8 +793,6 @@ export async function completeRepair(req: Request, res: Response) {
       [request.employee_id],
     );
     const employeeName = employeeRows[0]?.full_name || "employee";
-
-    await connection.beginTransaction();
 
     await connection.query(
       `UPDATE assets SET status = 'assigned', usage_state = 'active' WHERE id = ?`,
